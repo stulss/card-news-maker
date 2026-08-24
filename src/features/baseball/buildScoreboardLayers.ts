@@ -48,7 +48,7 @@ export function buildScoreboardLayers(game: KboGame, width: number, height: numb
   );
 
   const logoWidth = Math.min(110, width * 0.14);
-  const logoHeight = logoWidth * (41 / 64);
+  const logoHeight = logoWidth * (128 / 320); // public/logos/*.png는 320x128 캔버스로 통일 (2026-08-25 교체분)
   const logoY = height * 0.16;
   if (away.logoSrc) {
     layers.push(imageLayer({ zIndex: 2, x: width * 0.25 - logoWidth / 2, y: logoY, width: logoWidth, height: logoHeight, src: away.logoSrc, name: "원정팀 엠블럼" }));
