@@ -44,6 +44,8 @@ function App() {
   const [initialTemplates] = useState(initializeTemplates);
   const [templates, setTemplates] = useState(initialTemplates.templates);
   const [sidebarTab, setSidebarTab] = useState<"layers" | "templates">("layers");
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isStyleSheetOpen, setIsStyleSheetOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(initialTemplates.error);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
@@ -277,26 +279,15 @@ function App() {
   }
 
   return (
-    <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
-      <header
-        style={{
-          height: 56,
-          flexShrink: 0,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 20px",
-          borderBottom: "1px solid var(--color-border)",
-          background: "var(--color-bg-panel)",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+    <div className="app-shell">
+      <header className="app-header">
+        <div className="brand-controls">
+          <div className="app-brand">
             <div style={{ width: 20, height: 20, borderRadius: 5, background: "var(--color-accent)" }} />
             <div style={{ fontSize: 14, fontWeight: 600 }}>카드뉴스 메이커</div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", background: "oklch(0.23 0.008 264)", borderRadius: 7, padding: 2, border: "1px solid var(--color-border)" }} role="group" aria-label="화면비 선택">
+          <div className="ratio-selector" role="group" aria-label="화면비 선택">
             {RATIO_PRESETS.map((preset) => {
               const isActive = project.width === preset.width && project.height === preset.height;
               return (
@@ -323,7 +314,7 @@ function App() {
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div className="desktop-toolbar">
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
@@ -337,7 +328,7 @@ function App() {
           <button type="button" onClick={() => handleDownload("jpg")} style={toolbarButtonStyle}>
             JPG 다운로드
           </button>
-          <button type="button" onClick={() => handleDownload("png")} style={{ ...toolbarButtonStyle, background: "var(--color-accent)", color: "var(--color-accent-text)", fontWeight: 600 }}>
+          <button type="button" className="mobile-save-button" onClick={() => handleDownload("png")} style={{ ...toolbarButtonStyle, background: "var(--color-accent)", color: "var(--color-accent-text)", fontWeight: 600 }}>
             PNG 다운로드
           </button>
         </div>
@@ -367,7 +358,8 @@ function App() {
       {statusMessage && !errorMessage && <div className="status-banner" role="status">{statusMessage}</div>}
 
       <main className="editor-workspace">
-        <div className="left-sidebar" style={{ display: "flex", flexDirection: "column", width: 260, flexShrink: 0, borderRight: "1px solid var(--color-border)", background: "var(--color-bg-panel)" }}>
+        <button type="button" className={`mobile-sidebar-backdrop ${isMobileSidebarOpen ? "visible" : ""}`} aria-label="레이어 패널 닫기" onClick={() => setIsMobileSidebarOpen(false)} />
+        <div className={`left-sidebar ${isMobileSidebarOpen ? "mobile-open" : ""}`}>
           <div className="sidebar-tabs">
             <button
               type="button"
@@ -409,8 +401,22 @@ function App() {
         </div>
 
         <CanvasStage ref={canvasStageRef} project={project} selectedLayerId={selectedLayerId} onSelectLayer={setSelectedLayerId} onChangeLayer={updateLayer} />
-        <TextStylePanel layer={selectedTextLayer} onChange={(changes) => { if (selectedTextLayer) updateLayer(selectedTextLayer.id, changes); }} />
+        <div className={`style-sheet-shell ${isStyleSheetOpen ? "mobile-open" : ""}`}>
+          <button type="button" className="style-sheet-peek" aria-expanded={isStyleSheetOpen} onClick={() => setIsStyleSheetOpen((isOpen) => !isOpen)}>
+            <span className="sheet-grabber" aria-hidden="true" />
+            <span className="sheet-summary">{selectedTextLayer ? `텍스트 스타일 · “${selectedTextLayer.text}”` : "텍스트 레이어를 선택하세요"}</span>
+            <span aria-hidden="true">{isStyleSheetOpen ? "⌄" : "⌃"}</span>
+          </button>
+          <TextStylePanel layer={selectedTextLayer} onChange={(changes) => { if (selectedTextLayer) updateLayer(selectedTextLayer.id, changes); }} />
+        </div>
       </main>
+
+      <nav className="mobile-bottom-toolbar" aria-label="모바일 편집 도구">
+        <button type="button" onClick={() => fileInputRef.current?.click()}><span aria-hidden="true">▧</span><span>이미지</span></button>
+        <button type="button" onClick={handleAddText}><span aria-hidden="true">T</span><span>텍스트</span></button>
+        <button type="button" className={isMobileSidebarOpen ? "active" : ""} aria-expanded={isMobileSidebarOpen} onClick={() => { setSidebarTab("layers"); setIsMobileSidebarOpen((isOpen) => !isOpen); }}><span aria-hidden="true">▱</span><span>레이어</span></button>
+        <button type="button" className={isStyleSheetOpen ? "active" : ""} aria-expanded={isStyleSheetOpen} onClick={() => setIsStyleSheetOpen((isOpen) => !isOpen)}><span aria-hidden="true">Aa</span><span>속성</span></button>
+      </nav>
     </div>
   );
 }
