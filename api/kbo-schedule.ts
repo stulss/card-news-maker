@@ -5,7 +5,7 @@
 // 같은 핸들러를 vite.config.ts의 로컬 dev 미들웨어에서도 재사용한다.
 
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { cacheControlForDate, fetchKboScheduleForDate, KboDateFormatError, KboFetchError } from "./_kboClient";
+import { cacheControlForDate, fetchKboScheduleForDate, KboDateFormatError, KboFetchError } from "./_kboClient.js";
 
 export default async function handler(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = new URL(req.url ?? "", "http://localhost");
