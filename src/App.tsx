@@ -4,6 +4,7 @@ import type { CanvasStageHandle } from "./components/canvas/CanvasStage";
 import { TextStylePanel } from "./components/editor/TextStylePanel";
 import { LayerPanel } from "./components/layer/LayerPanel";
 import { TemplatePanel } from "./components/template/TemplatePanel";
+import { BaseballTab } from "./components/baseball/BaseballTab";
 import { createEmptyProject } from "./utils/createProject";
 import { loadImageFile, ImageUploadError } from "./features/image/loadImageFile";
 import { createExportFileName, downloadDataUrl } from "./features/export/downloadCanvas";
@@ -43,7 +44,7 @@ function App() {
   const [project, setProject] = useState(() => createEmptyProject(1080, 1080));
   const [initialTemplates] = useState(initializeTemplates);
   const [templates, setTemplates] = useState(initialTemplates.templates);
-  const [sidebarTab, setSidebarTab] = useState<"layers" | "templates">("layers");
+  const [sidebarTab, setSidebarTab] = useState<"layers" | "templates" | "baseball">("layers");
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isStyleSheetOpen, setIsStyleSheetOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(initialTemplates.error);
@@ -266,6 +267,14 @@ function App() {
     setSelectedLayerId(newLayer.id);
   }
 
+  function handleGenerateBaseballCard(result: { backgroundColor: string; layers: Layer[] }) {
+    setProject((p) => ({ ...p, backgroundColor: result.backgroundColor, layers: result.layers, updatedAt: new Date().toISOString() }));
+    setSelectedLayerId(null);
+    setSidebarTab("layers");
+    setErrorMessage(null);
+    setStatusMessage("야구 결과 카드를 만들었습니다. 자유롭게 편집해 보세요.");
+  }
+
   function handleDownload(format: "png" | "jpg") {
     try {
       const dataUrl = canvasStageRef.current?.toDataUrl(format, 0.9);
@@ -375,9 +384,16 @@ function App() {
             >
               템플릿 ({templates.length})
             </button>
+            <button
+              type="button"
+              className={`sidebar-tab-btn ${sidebarTab === "baseball" ? "active" : ""}`}
+              onClick={() => setSidebarTab("baseball")}
+            >
+              야구
+            </button>
           </div>
 
-          {sidebarTab === "layers" ? (
+          {sidebarTab === "layers" && (
             <LayerPanel
               layers={project.layers}
               selectedLayerId={selectedLayerId}
@@ -387,7 +403,8 @@ function App() {
               onMoveLayer={handleMoveLayer}
               onDeleteLayer={handleDeleteLayer}
             />
-          ) : (
+          )}
+          {sidebarTab === "templates" && (
             <TemplatePanel
               templates={templates}
               onCreate={handleCreateTemplate}
@@ -396,6 +413,13 @@ function App() {
               onDelete={handleDeleteTemplate}
               onExport={handleExportTemplates}
               onImport={handleImportTemplates}
+            />
+          )}
+          {sidebarTab === "baseball" && (
+            <BaseballTab
+              projectWidth={project.width}
+              projectHeight={project.height}
+              onGenerateCard={handleGenerateBaseballCard}
             />
           )}
         </div>

@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import Konva from "konva";
-import { Stage, Layer as KonvaLayer, Rect, Text as KonvaText, Transformer } from "react-konva";
+import { Stage, Layer as KonvaLayer, Rect, Circle, Text as KonvaText, Transformer } from "react-konva";
 import type { CanvasProject, Layer } from "../../types/canvas";
 import { ImageLayerNode } from "./ImageLayerNode";
 
@@ -121,6 +121,22 @@ export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasS
             {sortedLayers.map((layer) => {
               if (layer.type === "image") {
                 return <ImageLayerNode key={layer.id} layer={layer} nodeRef={rememberNode(layer.id)} onSelect={() => onSelectLayer(layer.id)} onDragEnd={(node) => onChangeLayer(layer.id, { x: node.x(), y: node.y() })} onTransformEnd={(node) => commitTransform(layer, node)} />;
+              }
+              if (layer.type === "shape") {
+                // speechBubble은 아직 어디서도 쓰지 않아 rectangle로 대체 렌더링한다.
+                const shared = {
+                  ref: rememberNode(layer.id), rotation: layer.rotation, visible: layer.visible,
+                  listening: !layer.locked, draggable: !layer.locked, fill: layer.fillColor,
+                  stroke: layer.strokeColor, strokeWidth: layer.strokeWidth ?? 0,
+                  onClick: () => onSelectLayer(layer.id), onTap: () => onSelectLayer(layer.id),
+                  onDragEnd: (event: Konva.KonvaEventObject<DragEvent>) => onChangeLayer(layer.id, { x: event.target.x(), y: event.target.y() }),
+                  onTransformEnd: (event: Konva.KonvaEventObject<Event>) => commitTransform(layer, event.target),
+                };
+                if (layer.shapeType === "circle") {
+                  const radius = Math.min(layer.width, layer.height) / 2;
+                  return <Circle key={layer.id} {...shared} x={layer.x + layer.width / 2} y={layer.y + layer.height / 2} radius={radius} />;
+                }
+                return <Rect key={layer.id} {...shared} x={layer.x} y={layer.y} width={layer.width} height={layer.height} />;
               }
               if (layer.type === "text") {
                 return <KonvaText ref={rememberNode(layer.id)} key={layer.id} x={layer.x} y={layer.y} width={layer.width} height={layer.height}

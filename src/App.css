@@ -198,6 +198,65 @@
   flex: 1;
 }
 
+.baseball-status-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+}
+
+.baseball-game-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.baseball-status-badge {
+  align-self: flex-start;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.baseball-status-badge.status-final {
+  background: oklch(0.30 0.10 155);
+  color: oklch(0.9 0.05 155);
+}
+
+.baseball-status-badge.status-canceled {
+  background: oklch(0.30 0.10 25);
+  color: oklch(0.9 0.05 25);
+}
+
+.baseball-status-badge.status-scheduled {
+  background: oklch(0.30 0.02 264);
+  color: var(--color-text-muted);
+}
+
+.baseball-matchup {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.baseball-manual-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.baseball-manual-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
 .text-style-panel {
   width: 296px;
   flex-shrink: 0;

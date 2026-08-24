@@ -3,8 +3,9 @@
 이미지에 문구를 얹어 카드뉴스·밈을 만드는 웹 도구. 로그인 없이 브라우저에서 바로 쓰고,
 업로드한 이미지는 서버로 전송되지 않는다. KBO 경기 결과를 스코어보드 카드뉴스로 만드는 탭을 별도로 둔다.
 
-> **상태: 개발 진행 중.** 화면 시안 4장과 프로젝트 뼈대(Vite + React + TS + Konva)가 있고,
-> 빈 캔버스 렌더링·이미지 업로드(F-01)·텍스트 추가(F-02)가 최소 구현돼 있다.
+> **상태: 카드 1~5(일반 카드뉴스) 완료 + Phase 4(야구 결과 카드) 완료.**
+> 편집·미리보기·화면비 전환·템플릿 CRUD·JSON 이동·모바일 반응형·야구 결과 카드 자동 생성까지
+> 전부 동작하며 브라우저로 실검증했다. 남은 것은 Phase 5(배포)뿐이다.
 > 진행 상황은 항상 `작업내역_체크리스트.md`가 최신이다.
 
 ## 문서 색인
@@ -40,42 +41,38 @@
 
 ## 폴더 구조
 
-현재:
-
 ```text
 card-news-maker/
 ├── PRD.md                       # 개발요청서 44장
 ├── CLAUDE.md                    # AI 작업 규칙
 ├── README.md
 ├── 작업내역_체크리스트.md         # 진행 상황·결정 기록
-├── design/                      # 화면 시안 4장 + canvas.json
-│   ├── Home.dc.html             #   홈 화면
-│   ├── Main.dc.html             #   편집기 PC (진입 아트보드)
-│   ├── BaseballTab.dc.html      #   야구 탭
-│   ├── EditorMobile.dc.html     #   편집기 모바일
-│   └── canvas.json              #   아트보드 배치
+├── docs/00_과제_요구사항_매핑.md  # 과제 채점 20개 항목 매핑
+├── design/                      # 화면 시안 4장 + canvas.json (구현 완료 후 참고용, 코드는 이미 별도)
+├── api/                         # 서버리스 함수(Vercel) — KBO 경기 결과 프록시
+│   ├── _kboClient.ts            #   크롤링·정규화 로직 (Vercel 함수·로컬 dev 미들웨어 공용)
+│   └── kbo-schedule.ts          #   GET /api/kbo-schedule?date=YYYY-MM-DD
+├── public/
+│   └── logos/                   # 구단 엠블럼 10종 + SOURCES.md(출처·취득일)
 ├── index.html
-├── vite.config.ts
-├── tsconfig*.json
-├── public/                      # favicon.svg, icons.svg
+├── vite.config.ts               # KBO 프록시용 로컬 dev 미들웨어 포함
+├── tsconfig*.json                # app / node / api 세 프로젝트로 분리
 └── src/
     ├── main.tsx
-    ├── App.tsx                  # 편집기 화면 셸
+    ├── App.tsx                  # 편집기 화면 셸 (레이어/템플릿/야구 3탭)
     ├── index.css                # 시안 색 토큰을 옮긴 CSS 변수
-    ├── components/canvas/       # CanvasStage, ImageLayerNode
+    ├── components/canvas/       # CanvasStage(이미지·텍스트·도형 렌더링), ImageLayerNode
+    ├── components/editor/       # TextStylePanel
+    ├── components/layer/        # LayerPanel
+    ├── components/template/     # TemplatePanel
+    ├── components/baseball/     # BaseballTab — 날짜 조회·경기 목록·카드 생성
     ├── features/image/          # loadImageFile — F-01 형식·용량 검증
+    ├── features/export/         # downloadCanvas — PNG/JPG 내보내기
+    ├── features/template/       # templateStore — CRUD·JSON 가져오기/내보내기
+    ├── features/baseball/       # teams, fetchKboSchedule, buildScoreboardLayers
     ├── types/                   # canvas.ts(21장), baseball.ts(43장)
     └── utils/                   # createProject.ts
 ```
-
-아직 없는 것 (Phase 4에서 만든다):
-
-```text
-├── api/                         # 서버리스 함수 (KBO 프록시)
-└── public/logos/                # 구단 엠블럼 + SOURCES.md
-```
-
-폴더는 **실제로 필요해질 때 만든다.** 빈 껍데기를 미리 파두지 않는다.
 
 ## 두 개의 탭
 
@@ -94,6 +91,7 @@ card-news-maker/
 
 ## 저작권
 
-구단 엠블럼은 각 구단 공식 CI 페이지에서 받아 **비상업적 과제 용도로만** 사용한다.
-원본을 변형하지 않으며, 출처와 취득일은 `public/logos/SOURCES.md`에 기록한다.
-엠블럼의 권리는 각 구단에 있다. 상업적 이용으로 전환하려면 각 구단의 별도 허락이 필요하다.
+구단 엠블럼은 KBO(한국야구위원회) 공식 홈페이지가 서빙하는 이미지를 그대로 받아
+**비상업적 과제 용도로만** 사용한다. 원본을 변형하지 않으며, 출처와 취득일은
+`public/logos/SOURCES.md`에 기록한다. 엠블럼의 권리는 각 구단 및 KBO에 있다.
+상업적 이용으로 전환하려면 각 구단·KBO의 별도 허락이 필요하다.
