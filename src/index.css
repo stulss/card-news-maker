@@ -1,0 +1,42 @@
+:root {
+  /* design/*.dc.html 시안(Home·Main·BaseballTab·EditorMobile)에서 뽑은 토큰.
+     시안이 바뀌면 여기도 같이 갱신할 것 (CLAUDE.md 4번 원칙) */
+  --color-bg: oklch(0.17 0.008 264);
+  --color-bg-panel: oklch(0.195 0.008 264);
+  --color-bg-canvas-area: oklch(0.135 0.006 264);
+  --color-border: oklch(0.31 0.010 264);
+  --color-text: oklch(0.95 0.004 264);
+  --color-text-muted: oklch(0.72 0.008 264);
+  --color-text-dim: oklch(0.55 0.008 264);
+  --color-accent: oklch(0.76 0.152 62);
+  --color-accent-text: oklch(0.24 0.06 62);
+  --font-sans: "IBM Plex Sans KR", "Malgun Gothic", system-ui, sans-serif;
+
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: dark;
+  color: var(--color-text);
+  background-color: var(--color-bg);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+#root {
+  width: 100%;
+  height: 100vh;
+}

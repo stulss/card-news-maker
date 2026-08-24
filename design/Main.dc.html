@@ -1,0 +1,247 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&display=swap">
+  <style>
+    body{margin:0;font-family:'IBM Plex Sans KR','Malgun Gothic',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+    a{color:oklch(0.76 0.152 62);text-decoration:none;}
+    a:hover{color:oklch(0.84 0.13 62);}
+  </style>
+</helmet>
+
+<div style="width:1440px;height:900px;background:oklch(0.17 0.008 264);color:oklch(0.95 0.004 264);display:flex;flex-direction:column;overflow:hidden">
+
+  <div style="height:56px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 16px 0 20px;border-bottom:1px solid oklch(0.31 0.010 264);background:oklch(0.195 0.008 264)">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="width:20px;height:20px;border-radius:5px;background:oklch(0.76 0.152 62)"></div>
+      <div style="font-size:14px;font-weight:600;letter-spacing:-0.01em">카드뉴스 메이커</div>
+      <div style="width:1px;height:16px;background:oklch(0.31 0.010 264);margin:0 6px"></div>
+      <div style="font-size:13px;color:oklch(0.72 0.008 264)">제목 없는 카드</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:oklch(0.72 0.008 264)">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h11a5 5 0 0 1 0 10h-6"></path><path d="M7 4 3 8l4 4"></path></svg>
+      </div>
+      <div style="width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:oklch(0.45 0.008 264)">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8H10a5 5 0 0 0 0 10h6"></path><path d="m17 4 4 4-4 4"></path></svg>
+      </div>
+      <div style="width:1px;height:20px;background:oklch(0.31 0.010 264);margin:0 4px"></div>
+      <div style="height:34px;display:flex;align-items:center;padding:0 14px;border-radius:8px;border:1px solid oklch(0.31 0.010 264);font-size:13px;color:oklch(0.88 0.006 264)">미리보기</div>
+      <div style="height:34px;display:flex;align-items:center;gap:7px;padding:0 16px;border-radius:8px;background:oklch(0.76 0.152 62);color:oklch(0.24 0.06 62);font-size:13px;font-weight:600">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><path d="m7 11 5 5 5-5"></path><path d="M4 20h16"></path></svg>
+        <div>다운로드</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="height:44px;flex-shrink:0;display:flex;align-items:stretch;justify-content:space-between;padding:0 20px;border-bottom:1px solid oklch(0.31 0.010 264);background:oklch(0.195 0.008 264)">
+    <div style="display:flex;align-items:stretch;gap:4px">
+      <div style="display:flex;align-items:center;padding:0 16px;font-size:13px;font-weight:600;color:oklch(0.95 0.004 264);border-bottom:2px solid oklch(0.76 0.152 62)">일반 카드</div>
+      <div style="display:flex;align-items:center;gap:7px;padding:0 16px;font-size:13px;font-weight:500;color:oklch(0.60 0.008 264);border-bottom:2px solid transparent">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M5 8.5c3 2 11 2 14 0M5 15.5c3-2 11-2 14 0"></path></svg>
+        <div>야구 카드</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="height:30px;display:flex;align-items:center;gap:6px;padding:0 12px;border-radius:7px;border:1px solid oklch(0.31 0.010 264);font-size:12px;color:oklch(0.88 0.006 264)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="m3 16 5-5 4 4 3-3 6 6"></path><circle cx="9" cy="9" r="1.4"></circle></svg>
+        <div>이미지 추가</div>
+      </div>
+      <div style="height:30px;display:flex;align-items:center;gap:6px;padding:0 12px;border-radius:7px;border:1px solid oklch(0.31 0.010 264);font-size:12px;color:oklch(0.88 0.006 264)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M5 6V4h14v2"></path><path d="M12 4v16"></path><path d="M9 20h6"></path></svg>
+        <div>텍스트 추가</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="flex-grow:1;display:flex;align-items:stretch;min-height:0">
+
+    <div style="width:236px;flex-shrink:0;border-right:1px solid oklch(0.31 0.010 264);background:oklch(0.195 0.008 264);display:flex;flex-direction:column">
+      <div style="height:42px;flex-shrink:0;display:flex;align-items:center;padding:0 16px;font-size:12px;font-weight:600;letter-spacing:0.03em;color:oklch(0.72 0.008 264)">레이어</div>
+      <div style="display:flex;flex-direction:column;gap:4px;padding:0 10px">
+
+        <div style="display:flex;align-items:center;gap:10px;height:52px;padding:0 10px;border-radius:8px;background:oklch(0.26 0.020 62);border:1px solid oklch(0.76 0.152 62);box-sizing:border-box">
+          <div style="width:34px;height:34px;flex-shrink:0;border-radius:5px;background:oklch(0.32 0.010 264);display:flex;align-items:center;justify-content:center;color:oklch(0.90 0.004 264);font-size:15px;font-weight:700">T</div>
+          <div style="flex-grow:1;min-width:0;font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">오늘도 화이팅!</div>
+          <div style="display:flex;gap:8px;color:oklch(0.72 0.008 264);flex-shrink:0">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.8-6 10-6 10 6 10 6-3.8 6-10 6-10-6-10-6Z"></path><circle cx="12" cy="12" r="2.6"></circle></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0"></path></svg>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:10px;height:52px;padding:0 10px;border-radius:8px;border:1px solid transparent;box-sizing:border-box">
+          <div style="width:34px;height:34px;flex-shrink:0;border-radius:5px;overflow:hidden;position:relative;background:oklch(0.55 0.09 232)">
+            <div style="position:absolute;left:0;right:0;top:0;height:56%;background:oklch(0.72 0.088 228)"></div>
+            <div style="position:absolute;left:-6px;bottom:-8px;width:30px;height:30px;border-radius:50%;background:oklch(0.47 0.075 168)"></div>
+          </div>
+          <div style="flex-grow:1;min-width:0;font-size:12px;color:oklch(0.82 0.006 264);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">배경사진.jpg</div>
+          <div style="display:flex;gap:8px;color:oklch(0.55 0.008 264);flex-shrink:0">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.8-6 10-6 10 6 10 6-3.8 6-10 6-10-6-10-6Z"></path><circle cx="12" cy="12" r="2.6"></circle></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0"></path></svg>
+          </div>
+        </div>
+
+      </div>
+      <div style="flex-grow:1"></div>
+      <div style="padding:14px 16px;border-top:1px solid oklch(0.31 0.010 264);font-size:11px;line-height:1.6;color:oklch(0.50 0.008 264)">맨 위 레이어가 가장 앞에 그려집니다.</div>
+    </div>
+
+    <div style="flex-grow:1;min-width:0;display:flex;flex-direction:column;background:oklch(0.135 0.006 264)">
+
+      <div style="height:44px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid oklch(0.25 0.008 264)">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="font-size:11px;color:oklch(0.55 0.008 264)">캔버스 크기</div>
+          <div style="height:28px;display:flex;align-items:center;gap:10px;padding:0 10px;border-radius:6px;border:1px solid oklch(0.31 0.010 264);background:oklch(0.195 0.008 264);font-size:12px">
+            <div>1080 × 1080 · 1:1</div>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="oklch(0.60 0.008 264)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;font-size:12px;color:oklch(0.60 0.008 264)">
+          <div>52%</div>
+          <div style="display:flex;align-items:center;gap:2px">
+            <div style="width:26px;height:26px;border-radius:6px;border:1px solid oklch(0.31 0.010 264);display:flex;align-items:center;justify-content:center">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"></path></svg>
+            </div>
+            <div style="width:26px;height:26px;border-radius:6px;border:1px solid oklch(0.31 0.010 264);display:flex;align-items:center;justify-content:center">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="flex-grow:1;display:flex;align-items:center;justify-content:center;position:relative">
+        <div style="width:560px;height:560px;background:#ffffff;box-shadow:0 24px 60px -16px rgba(0,0,0,0.75);position:relative;overflow:hidden">
+          <div style="position:absolute;left:0;right:0;top:0;bottom:0;background:oklch(0.55 0.09 232)"></div>
+          <div style="position:absolute;left:0;right:0;top:0;height:56%;background:oklch(0.72 0.088 228)"></div>
+          <div style="position:absolute;left:-56px;bottom:-84px;width:392px;height:392px;border-radius:50%;background:oklch(0.47 0.075 168)"></div>
+          <div style="position:absolute;right:-98px;bottom:-154px;width:476px;height:476px;border-radius:50%;background:oklch(0.40 0.062 172)"></div>
+          <div style="position:absolute;right:73px;top:62px;width:76px;height:76px;border-radius:50%;background:oklch(0.90 0.09 92)"></div>
+          <div style="position:absolute;left:0;right:0;bottom:0;top:38%;background:linear-gradient(to bottom,rgba(0,0,0,0) 0%,rgba(0,0,0,0.42) 78%)"></div>
+          <div style="position:absolute;left:0;right:0;bottom:50px;text-align:center;font-size:62px;font-weight:700;color:#ffffff;letter-spacing:-0.02em;-webkit-text-stroke:7px rgba(0,0,0,0.62);paint-order:stroke fill">오늘도 화이팅!</div>
+          <div style="position:absolute;left:30px;right:30px;bottom:34px;height:96px;border:1.5px solid oklch(0.76 0.152 62);box-sizing:border-box"></div>
+          <div style="position:absolute;left:24px;bottom:124px;width:9px;height:9px;background:oklch(0.76 0.152 62)"></div>
+          <div style="position:absolute;right:24px;bottom:124px;width:9px;height:9px;background:oklch(0.76 0.152 62)"></div>
+          <div style="position:absolute;left:24px;bottom:28px;width:9px;height:9px;background:oklch(0.76 0.152 62)"></div>
+          <div style="position:absolute;right:24px;bottom:28px;width:9px;height:9px;background:oklch(0.76 0.152 62)"></div>
+        </div>
+      </div>
+
+      <div style="height:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:oklch(0.45 0.008 264);border-top:1px solid oklch(0.25 0.008 264)">미리보기와 다운로드 결과가 같은 캔버스에서 그려집니다</div>
+
+    </div>
+
+    <div style="width:296px;flex-shrink:0;border-left:1px solid oklch(0.31 0.010 264);background:oklch(0.195 0.008 264);display:flex;flex-direction:column;overflow:hidden">
+      <div style="height:42px;flex-shrink:0;display:flex;align-items:center;padding:0 18px;font-size:12px;font-weight:600;letter-spacing:0.03em;color:oklch(0.72 0.008 264);border-bottom:1px solid oklch(0.26 0.008 264)">텍스트 스타일</div>
+
+      <div style="display:flex;flex-direction:column;gap:18px;padding:18px">
+
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="font-size:11px;color:oklch(0.60 0.008 264)">글꼴</div>
+          <div style="height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 11px;border-radius:7px;border:1px solid oklch(0.31 0.010 264);background:oklch(0.23 0.008 264);font-size:13px">
+            <div>Pretendard</div>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="oklch(0.60 0.008 264)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div style="font-size:11px;color:oklch(0.60 0.008 264)">크기</div>
+            <div style="font-size:12px;color:oklch(0.88 0.006 264)">120 px</div>
+          </div>
+          <div style="height:4px;border-radius:2px;background:oklch(0.30 0.008 264);position:relative">
+            <div style="position:absolute;left:0;top:0;bottom:0;width:46%;border-radius:2px;background:oklch(0.76 0.152 62)"></div>
+            <div style="position:absolute;left:46%;top:-5px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:oklch(0.95 0.004 264)"></div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="font-size:11px;color:oklch(0.60 0.008 264)">글자 색상</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:28px;height:28px;border-radius:6px;background:#ffffff;border:2px solid oklch(0.76 0.152 62);box-sizing:border-box"></div>
+            <div style="width:28px;height:28px;border-radius:6px;background:#111111;border:1px solid oklch(0.36 0.010 264);box-sizing:border-box"></div>
+            <div style="width:28px;height:28px;border-radius:6px;background:oklch(0.72 0.16 45)"></div>
+            <div style="width:28px;height:28px;border-radius:6px;background:oklch(0.62 0.15 250)"></div>
+            <div style="flex-grow:1;height:28px;display:flex;align-items:center;padding:0 9px;border-radius:6px;border:1px solid oklch(0.31 0.010 264);background:oklch(0.23 0.008 264);font-size:11px;color:oklch(0.78 0.006 264);box-sizing:border-box">#FFFFFF</div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="font-size:11px;color:oklch(0.60 0.008 264)">정렬 · 스타일</div>
+          <div style="display:flex;gap:8px">
+            <div style="display:flex;border-radius:7px;border:1px solid oklch(0.31 0.010 264);overflow:hidden">
+              <div style="width:34px;height:32px;display:flex;align-items:center;justify-content:center;color:oklch(0.66 0.008 264)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M4 12h10M4 18h13"></path></svg>
+              </div>
+              <div style="width:34px;height:32px;display:flex;align-items:center;justify-content:center;background:oklch(0.76 0.152 62);color:oklch(0.24 0.06 62)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M7 12h10M6 18h12"></path></svg>
+              </div>
+              <div style="width:34px;height:32px;display:flex;align-items:center;justify-content:center;color:oklch(0.66 0.008 264)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M10 12h10M7 18h13"></path></svg>
+              </div>
+            </div>
+            <div style="display:flex;border-radius:7px;border:1px solid oklch(0.31 0.010 264);overflow:hidden">
+              <div style="width:34px;height:32px;display:flex;align-items:center;justify-content:center;background:oklch(0.76 0.152 62);color:oklch(0.24 0.06 62);font-size:14px;font-weight:700">B</div>
+              <div style="width:34px;height:32px;display:flex;align-items:center;justify-content:center;color:oklch(0.66 0.008 264);font-size:14px;font-style:italic">I</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="height:1px;background:oklch(0.26 0.008 264)"></div>
+
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div style="font-size:11px;font-weight:600;color:oklch(0.88 0.006 264)">외곽선</div>
+            <div style="width:34px;height:19px;border-radius:10px;background:oklch(0.76 0.152 62);position:relative">
+              <div style="position:absolute;right:2px;top:2px;width:15px;height:15px;border-radius:50%;background:oklch(0.20 0.02 62)"></div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:28px;height:28px;border-radius:6px;background:#111111;border:1px solid oklch(0.36 0.010 264);box-sizing:border-box"></div>
+            <div style="flex-grow:1;height:4px;border-radius:2px;background:oklch(0.30 0.008 264);position:relative">
+              <div style="position:absolute;left:0;top:0;bottom:0;width:34%;border-radius:2px;background:oklch(0.76 0.152 62)"></div>
+              <div style="position:absolute;left:34%;top:-5px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:oklch(0.95 0.004 264)"></div>
+            </div>
+            <div style="font-size:11px;color:oklch(0.78 0.006 264);width:30px;text-align:right">8 px</div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div style="font-size:11px;font-weight:600;color:oklch(0.88 0.006 264)">그림자</div>
+          <div style="width:34px;height:19px;border-radius:10px;background:oklch(0.30 0.008 264);position:relative">
+            <div style="position:absolute;left:2px;top:2px;width:15px;height:15px;border-radius:50%;background:oklch(0.55 0.008 264)"></div>
+          </div>
+        </div>
+
+        <div style="height:1px;background:oklch(0.26 0.008 264)"></div>
+
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
+          <div style="display:flex;flex-direction:column;gap:7px">
+            <div style="font-size:11px;color:oklch(0.60 0.008 264)">줄 간격</div>
+            <div style="height:32px;display:flex;align-items:center;padding:0 10px;border-radius:7px;border:1px solid oklch(0.31 0.010 264);background:oklch(0.23 0.008 264);font-size:12px;box-sizing:border-box">1.35</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:7px">
+            <div style="font-size:11px;color:oklch(0.60 0.008 264)">자간</div>
+            <div style="height:32px;display:flex;align-items:center;padding:0 10px;border-radius:7px;border:1px solid oklch(0.31 0.010 264);background:oklch(0.23 0.008 264);font-size:12px;box-sizing:border-box">-0.02 em</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

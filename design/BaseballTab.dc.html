@@ -1,0 +1,262 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&display=swap">
+  <style>
+    body{margin:0;font-family:'IBM Plex Sans KR','Malgun Gothic',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+    a{color:oklch(0.76 0.152 62);text-decoration:none;}
+    a:hover{color:oklch(0.84 0.13 62);}
+  </style>
+</helmet>
+
+<div style="width:1440px;height:900px;background:oklch(0.17 0.008 264);color:oklch(0.95 0.004 264);display:flex;flex-direction:column;overflow:hidden">
+
+  <div style="height:56px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 16px 0 20px;border-bottom:1px solid oklch(0.31 0.010 264);background:oklch(0.195 0.008 264)">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="width:20px;height:20px;border-radius:5px;background:oklch(0.76 0.152 62)"></div>
+      <div style="font-size:14px;font-weight:600;letter-spacing:-0.01em">카드뉴스 메이커</div>
+      <div style="width:1px;height:16px;background:oklch(0.31 0.010 264);margin:0 6px"></div>
+      <div style="font-size:13px;color:oklch(0.72 0.008 264)">한화 4 : 7 LG</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:oklch(0.72 0.008 264)">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h11a5 5 0 0 1 0 10h-6"></path><path d="M7 4 3 8l4 4"></path></svg>
+      </div>
+      <div style="width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:oklch(0.45 0.008 264)">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8H10a5 5 0 0 0 0 10h6"></path><path d="m17 4 4 4-4 4"></path></svg>
+      </div>
+      <div style="width:1px;height:20px;background:oklch(0.31 0.010 264);margin:0 4px"></div>
+      <div style="height:34px;display:flex;align-items:center;padding:0 14px;border-radius:8px;border:1px solid oklch(0.31 0.010 264);font-size:13px;color:oklch(0.88 0.006 264)">미리보기</div>
+      <div style="height:34px;display:flex;align-items:center;gap:7px;padding:0 16px;border-radius:8px;background:oklch(0.76 0.152 62);color:oklch(0.24 0.06 62);font-size:13px;font-weight:600">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><path d="m7 11 5 5 5-5"></path><path d="M4 20h16"></path></svg>
+        <div>다운로드</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="height:44px;flex-shrink:0;display:flex;align-items:stretch;justify-content:space-between;padding:0 20px;border-bottom:1px solid oklch(0.31 0.010 264);background:oklch(0.195 0.008 264)">
+    <div style="display:flex;align-items:stretch;gap:4px">
+      <div style="display:flex;align-items:center;padding:0 16px;font-size:13px;font-weight:500;color:oklch(0.60 0.008 264);border-bottom:2px solid transparent">일반 카드</div>
+      <div style="display:flex;align-items:center;gap:7px;padding:0 16px;font-size:13px;font-weight:600;color:oklch(0.95 0.004 264);border-bottom:2px solid oklch(0.76 0.152 62)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M5 8.5c3 2 11 2 14 0M5 15.5c3-2 11-2 14 0"></path></svg>
+        <div>야구 카드</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="height:30px;display:flex;align-items:center;gap:6px;padding:0 12px;border-radius:7px;border:1px solid oklch(0.31 0.010 264);font-size:12px;color:oklch(0.88 0.006 264)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M5 6V4h14v2"></path><path d="M12 4v16"></path><path d="M9 20h6"></path></svg>
+        <div>텍스트 추가</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="flex-grow:1;display:flex;align-items:stretch;min-height:0">
+
+    <div style="width:420px;flex-shrink:0;border-right:1px solid oklch(0.31 0.010 264);background:oklch(0.195 0.008 264);display:flex;flex-direction:column;overflow:hidden">
+
+      <div style="padding:18px 18px 14px 18px;display:flex;flex-direction:column;gap:12px;border-bottom:1px solid oklch(0.26 0.008 264)">
+        <div style="font-size:12px;font-weight:600;letter-spacing:0.03em;color:oklch(0.72 0.008 264)">경기 불러오기</div>
+        <div style="display:flex;gap:8px">
+          <div style="flex-grow:1;height:36px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-radius:8px;border:1px solid oklch(0.34 0.010 264);background:oklch(0.23 0.008 264);font-size:13px;box-sizing:border-box">
+            <div>2026-08-22</div>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="oklch(0.62 0.008 264)" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M8 3v4M16 3v4M3 10h18"></path></svg>
+          </div>
+          <div style="height:36px;display:flex;align-items:center;padding:0 18px;border-radius:8px;background:oklch(0.76 0.152 62);color:oklch(0.24 0.06 62);font-size:13px;font-weight:600">조회</div>
+        </div>
+        <div style="font-size:11px;color:oklch(0.58 0.008 264)">8월 22일 (금) · 경기 3건</div>
+      </div>
+
+      <div style="flex-grow:1;min-height:0;display:flex;flex-direction:column;gap:8px;padding:14px 14px 0 14px;overflow:hidden">
+
+        <div style="border-radius:10px;border:1px solid oklch(0.76 0.152 62);background:oklch(0.245 0.018 62);padding:13px 14px;display:flex;flex-direction:column;gap:11px;box-sizing:border-box">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div style="font-size:10px;font-weight:600;letter-spacing:0.04em;color:oklch(0.80 0.13 145);border:1px solid oklch(0.50 0.09 145);border-radius:4px;padding:2px 7px">종료</div>
+            <div style="font-size:11px;color:oklch(0.62 0.008 264)">잠실야구장</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="display:flex;align-items:center;gap:8px;flex-grow:1;min-width:0">
+              <div style="width:30px;height:30px;flex-shrink:0;border-radius:50%;background:#FF6600;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff">한화</div>
+              <div style="font-size:12px;color:oklch(0.78 0.006 264);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">한화 이글스</div>
+            </div>
+            <div style="display:flex;align-items:baseline;gap:7px;flex-shrink:0">
+              <div style="font-size:20px;font-weight:600;color:oklch(0.66 0.008 264)">4</div>
+              <div style="font-size:12px;color:oklch(0.48 0.008 264)">:</div>
+              <div style="font-size:20px;font-weight:700;color:oklch(0.97 0.004 264)">7</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-grow:1;min-width:0;justify-content:flex-end">
+              <div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">LG 트윈스</div>
+              <div style="width:30px;height:30px;flex-shrink:0;border-radius:50%;background:#C30452;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff">LG</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="border-radius:10px;border:1px solid oklch(0.29 0.008 264);padding:13px 14px;display:flex;flex-direction:column;gap:11px;opacity:0.62;box-sizing:border-box">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div style="font-size:10px;font-weight:600;letter-spacing:0.04em;color:oklch(0.74 0.10 250);border:1px solid oklch(0.46 0.07 250);border-radius:4px;padding:2px 7px">우천취소</div>
+            <div style="font-size:11px;color:oklch(0.62 0.008 264)">잠실야구장</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="display:flex;align-items:center;gap:8px;flex-grow:1;min-width:0">
+              <div style="width:30px;height:30px;flex-shrink:0;border-radius:50%;background:#315288;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff">NC</div>
+              <div style="font-size:12px;color:oklch(0.78 0.006 264);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">NC 다이노스</div>
+            </div>
+            <div style="font-size:12px;color:oklch(0.58 0.008 264);flex-shrink:0">vs</div>
+            <div style="display:flex;align-items:center;gap:8px;flex-grow:1;min-width:0;justify-content:flex-end">
+              <div style="font-size:12px;color:oklch(0.78 0.006 264);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">두산 베어스</div>
+              <div style="width:30px;height:30px;flex-shrink:0;border-radius:50%;background:#131230;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff">두산</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="border-radius:10px;border:1px solid oklch(0.29 0.008 264);padding:13px 14px;display:flex;flex-direction:column;gap:11px;opacity:0.62;box-sizing:border-box">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div style="font-size:10px;font-weight:600;letter-spacing:0.04em;color:oklch(0.68 0.008 264);border:1px solid oklch(0.42 0.008 264);border-radius:4px;padding:2px 7px">18:30 예정</div>
+            <div style="font-size:11px;color:oklch(0.62 0.008 264)">대구삼성라이온즈파크</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="display:flex;align-items:center;gap:8px;flex-grow:1;min-width:0">
+              <div style="width:30px;height:30px;flex-shrink:0;border-radius:50%;background:#041E42;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff">롯데</div>
+              <div style="font-size:12px;color:oklch(0.78 0.006 264);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">롯데 자이언츠</div>
+            </div>
+            <div style="font-size:12px;color:oklch(0.58 0.008 264);flex-shrink:0">vs</div>
+            <div style="display:flex;align-items:center;gap:8px;flex-grow:1;min-width:0;justify-content:flex-end">
+              <div style="font-size:12px;color:oklch(0.78 0.006 264);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">삼성 라이온즈</div>
+              <div style="width:30px;height:30px;flex-shrink:0;border-radius:50%;background:#074CA1;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff">삼성</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="font-size:10px;line-height:1.6;color:oklch(0.48 0.008 264);padding:2px 2px 0 2px">아직 끝나지 않았거나 취소된 경기는 결과 카드를 만들 수 없습니다.</div>
+
+      </div>
+
+      <div style="flex-shrink:0;margin:14px;padding:13px 14px;border-radius:10px;border:1px solid oklch(0.31 0.010 264);background:oklch(0.225 0.008 264);display:flex;flex-direction:column;gap:9px;box-sizing:border-box">
+        <div style="display:flex;align-items:center;gap:8px">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="oklch(0.76 0.152 62)" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16.5v.5"></path></svg>
+          <div style="font-size:12px;font-weight:600">경기 정보를 못 불러왔나요?</div>
+        </div>
+        <div style="font-size:11px;line-height:1.65;color:oklch(0.66 0.008 264)">팀과 점수를 직접 입력해서 같은 스코어보드 카드를 만들 수 있습니다.</div>
+        <div style="align-self:flex-start;height:30px;display:flex;align-items:center;padding:0 14px;border-radius:7px;border:1px solid oklch(0.40 0.010 264);font-size:12px;font-weight:500">직접 입력</div>
+      </div>
+
+    </div>
+
+    <div style="flex-grow:1;min-width:0;display:flex;flex-direction:column;background:oklch(0.135 0.006 264)">
+
+      <div style="height:44px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid oklch(0.25 0.008 264)">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="font-size:11px;color:oklch(0.55 0.008 264)">캔버스 크기</div>
+          <div style="height:28px;display:flex;align-items:center;gap:10px;padding:0 10px;border-radius:6px;border:1px solid oklch(0.31 0.010 264);background:oklch(0.195 0.008 264);font-size:12px">
+            <div>1080 × 1350 · 4:5</div>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="oklch(0.60 0.008 264)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+          </div>
+        </div>
+        <div style="font-size:12px;color:oklch(0.60 0.008 264)">40%</div>
+      </div>
+
+      <div style="flex-grow:1;display:flex;align-items:center;justify-content:center">
+        <div style="width:432px;height:540px;background:#ffffff;box-shadow:0 24px 60px -16px rgba(0,0,0,0.75);display:flex;flex-direction:column;overflow:hidden">
+
+          <div style="height:62px;flex-shrink:0;background:#0E1116;display:flex;align-items:center;justify-content:space-between;padding:0 22px">
+            <div style="font-size:14px;font-weight:600;color:#ffffff;letter-spacing:-0.01em">2026.08.22 (금)</div>
+            <div style="font-size:12px;color:rgba(255,255,255,0.62)">잠실야구장</div>
+          </div>
+
+          <div style="flex-grow:1;display:flex;align-items:stretch">
+
+            <div style="flex-grow:1;background:#B24700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;position:relative">
+              <div style="width:88px;height:88px;border-radius:50%;background:rgba(255,255,255,0.14);border:2px dashed rgba(255,255,255,0.42);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-sizing:border-box">
+                <div style="font-size:15px;font-weight:700;color:rgba(255,255,255,0.92)">한화</div>
+                <div style="font-size:8px;color:rgba(255,255,255,0.55);letter-spacing:0.02em">엠블럼</div>
+              </div>
+              <div style="font-size:15px;font-weight:600;color:rgba(255,255,255,0.86)">한화 이글스</div>
+              <div style="font-size:76px;font-weight:700;color:rgba(255,255,255,0.82);line-height:1;letter-spacing:-0.03em">4</div>
+            </div>
+
+            <div style="flex-grow:1;background:#C30452;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;position:relative">
+              <div style="position:absolute;top:16px;right:16px;font-size:10px;font-weight:700;letter-spacing:0.08em;color:#C30452;background:#ffffff;border-radius:4px;padding:3px 8px">WIN</div>
+              <div style="width:88px;height:88px;border-radius:50%;background:rgba(255,255,255,0.16);border:2px dashed rgba(255,255,255,0.5);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-sizing:border-box">
+                <div style="font-size:17px;font-weight:700;color:#ffffff">LG</div>
+                <div style="font-size:8px;color:rgba(255,255,255,0.6);letter-spacing:0.02em">엠블럼</div>
+              </div>
+              <div style="font-size:15px;font-weight:600;color:#ffffff">LG 트윈스</div>
+              <div style="font-size:76px;font-weight:700;color:#ffffff;line-height:1;letter-spacing:-0.03em">7</div>
+            </div>
+
+          </div>
+
+          <div style="height:92px;flex-shrink:0;background:#0E1116;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:0 22px">
+            <div style="font-size:23px;font-weight:700;color:#ffffff;letter-spacing:-0.02em">LG, 잠실에서 3점 차 승리</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.48)">KBO 정규시즌</div>
+          </div>
+
+        </div>
+      </div>
+
+      <div style="height:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:oklch(0.45 0.008 264);border-top:1px solid oklch(0.25 0.008 264)">경기를 고르면 배경과 문구가 자동으로 채워집니다 · 이후 편집은 일반 카드와 같습니다</div>
+
+    </div>
+
+    <div style="width:280px;flex-shrink:0;border-left:1px solid oklch(0.31 0.010 264);background:oklch(0.195 0.008 264);display:flex;flex-direction:column;overflow:hidden">
+      <div style="height:42px;flex-shrink:0;display:flex;align-items:center;padding:0 18px;font-size:12px;font-weight:600;letter-spacing:0.03em;color:oklch(0.72 0.008 264);border-bottom:1px solid oklch(0.26 0.008 264)">텍스트 스타일</div>
+
+      <div style="display:flex;flex-direction:column;gap:16px;padding:18px">
+
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="font-size:11px;color:oklch(0.60 0.008 264)">카드 문구</div>
+          <div style="min-height:60px;padding:10px 11px;border-radius:8px;border:1px solid oklch(0.34 0.010 264);background:oklch(0.23 0.008 264);font-size:12px;line-height:1.6;box-sizing:border-box">LG, 잠실에서 3점 차 승리</div>
+          <div style="font-size:10px;line-height:1.6;color:oklch(0.52 0.008 264)">점수 차로 자동 작성됩니다. 직접 고쳐도 됩니다.</div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="font-size:11px;color:oklch(0.60 0.008 264)">글꼴</div>
+          <div style="height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 11px;border-radius:7px;border:1px solid oklch(0.31 0.010 264);background:oklch(0.23 0.008 264);font-size:13px;box-sizing:border-box">
+            <div>Pretendard</div>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="oklch(0.60 0.008 264)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div style="font-size:11px;color:oklch(0.60 0.008 264)">크기</div>
+            <div style="font-size:12px;color:oklch(0.88 0.006 264)">58 px</div>
+          </div>
+          <div style="height:4px;border-radius:2px;background:oklch(0.30 0.008 264);position:relative">
+            <div style="position:absolute;left:0;top:0;bottom:0;width:30%;border-radius:2px;background:oklch(0.76 0.152 62)"></div>
+            <div style="position:absolute;left:30%;top:-5px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:oklch(0.95 0.004 264)"></div>
+          </div>
+        </div>
+
+        <div style="height:1px;background:oklch(0.26 0.008 264)"></div>
+
+        <div style="display:flex;flex-direction:column;gap:9px">
+          <div style="font-size:11px;font-weight:600;color:oklch(0.88 0.006 264)">구단 엠블럼</div>
+          <div style="font-size:10px;line-height:1.7;color:oklch(0.58 0.008 264)">각 구단 공식 CI에서 받은 엠블럼을 원본 그대로 씁니다. 비상업적 과제 용도이며 권리는 각 구단에 있습니다.</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding-top:2px">
+            <div style="font-size:11px;color:oklch(0.72 0.008 264)">카드에 표시</div>
+            <div style="width:34px;height:19px;border-radius:10px;background:oklch(0.76 0.152 62);position:relative">
+              <div style="position:absolute;right:2px;top:2px;width:15px;height:15px;border-radius:50%;background:oklch(0.20 0.02 62)"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

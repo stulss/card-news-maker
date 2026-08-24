@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "name": "card-news-maker 화면 시안",
+  "gutter": 120,
+  "artboards": [
+    {
+      "id": "home",
+      "name": "Home",
+      "file": "Home.dc.html",
+      "x": 0,
+      "y": 0,
+      "width": 1440,
+      "height": 900,
+      "note": "진입점. 새로 만들기 / 야구 결과로 만들기 CTA, 템플릿 5종 프리뷰"
+    },
+    {
+      "id": "main",
+      "name": "Main (편집기 PC · 일반 카드)",
+      "file": "Main.dc.html",
+      "x": 1560,
+      "y": 0,
+      "width": 1440,
+      "height": 900,
+      "note": "일반 카드 탭 선택 상태. 레이어 패널 + 캔버스 + 텍스트 스타일 패널"
+    },
+    {
+      "id": "baseball",
+      "name": "BaseballTab (편집기 PC · 야구 카드)",
+      "file": "BaseballTab.dc.html",
+      "x": 3120,
+      "y": 0,
+      "width": 1440,
+      "height": 900,
+      "note": "야구 카드 탭 선택 상태. Main과 동일 셸(헤더·탭바·우측 패널), 좌측만 경기 목록으로 교체"
+    },
+    {
+      "id": "editor-mobile",
+      "name": "EditorMobile (편집기 모바일 · 일반 카드)",
+      "file": "EditorMobile.dc.html",
+      "x": 0,
+      "y": 1020,
+      "width": 390,
+      "height": 844,
+      "note": "Main과 동일 상태(텍스트 레이어 선택)를 모바일 레이아웃으로. 속성 패널은 바텀시트, 삽입 도구는 하단 고정 툴바"
+    }
+  ],
+  "relations": [
+    { "from": "home", "to": "main", "label": "새로 만들기 / 템플릿 선택" },
+    { "from": "home", "to": "baseball", "label": "야구 결과로 만들기" },
+    { "from": "main", "to": "baseball", "label": "탭 전환 (F-30, 캔버스 상태 유지)" },
+    { "from": "main", "to": "editor-mobile", "label": "동일 상태, 반응형 레이아웃" }
+  ]
+}
