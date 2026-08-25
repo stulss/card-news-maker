@@ -45,10 +45,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+// opacity는 선택 필드다. 없으면 통과(기존 템플릿 호환), 있으면 0~1 유한수만 허용한다 —
+// 검증을 빼면 가져온 JSON이 opacity: 0으로 레이어를 안 보이게 만들어도 레이어 패널에는
+// 여전히 "표시" 상태로 보여 사용자가 원인을 알 수 없다.
+function hasValidOptionalOpacity(layer: Record<string, unknown>) {
+  if (layer.opacity === undefined) return true;
+  return typeof layer.opacity === "number" && Number.isFinite(layer.opacity) &&
+    layer.opacity >= 0 && layer.opacity <= 1;
+}
+
 function hasBaseLayerFields(layer: Record<string, unknown>) {
   return typeof layer.id === "string" && typeof layer.name === "string" &&
     ["x", "y", "width", "height", "rotation", "zIndex"].every((key) => typeof layer[key] === "number" && Number.isFinite(layer[key])) &&
-    typeof layer.visible === "boolean" && typeof layer.locked === "boolean";
+    typeof layer.visible === "boolean" && typeof layer.locked === "boolean" &&
+    hasValidOptionalOpacity(layer);
 }
 
 function isSafeImageSource(value: unknown) {

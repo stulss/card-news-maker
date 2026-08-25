@@ -36,7 +36,6 @@ export function ImageLayerNode({ layer, nodeRef, onSelect, onDragEnd, onTransfor
       rotation={layer.rotation}
       visible={layer.visible}
       opacity={layer.opacity ?? 1}
-      globalCompositeOperation={(layer.globalCompositeOperation as any) ?? "source-over"}
       listening={!layer.locked}
       draggable={!layer.locked}
       onClick={onSelect}

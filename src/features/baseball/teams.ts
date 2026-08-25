@@ -15,7 +15,7 @@ export const KBO_TEAMS: Record<string, KboTeamMeta> = {
   HH: { code: "HH", primaryColor: "#ff6600", textColor: "#0a0a0a", logoSrc: "/logos/HH.png", logoAspectRatio: 300 / 300 },
   HT: { code: "HT", primaryColor: "#ea0029", textColor: "#ffffff", logoSrc: "/logos/HT.png", logoAspectRatio: 474 / 376 },
   KT: { code: "KT", primaryColor: "#000000", textColor: "#ffffff", logoSrc: "/logos/KT.png", logoAspectRatio: 267 / 283 },
-  LG: { code: "LG", primaryColor: "#c30452", textColor: "#ffffff", logoSrc: "/logos/LG.png", logoAspectRatio: 120 / 120 },
+  LG: { code: "LG", primaryColor: "#c30452", textColor: "#ffffff", logoSrc: "/logos/LG.png", logoAspectRatio: 1174 / 920 },
   LT: { code: "LT", primaryColor: "#041e42", textColor: "#ffffff", logoSrc: "/logos/LT.png", logoAspectRatio: 1209 / 944 },
   NC: { code: "NC", primaryColor: "#315288", textColor: "#ffffff", logoSrc: "/logos/NC.png", logoAspectRatio: 1001 / 689 },
   OB: { code: "OB", primaryColor: "#131230", textColor: "#ffffff", logoSrc: "/logos/OB.png", logoAspectRatio: 244 / 244 },

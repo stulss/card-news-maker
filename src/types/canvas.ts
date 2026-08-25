@@ -25,7 +25,9 @@ export interface BaseLayer {
   locked: boolean;
   name: string;
   opacity?: number; // 0~1, 기본 1(불투명). 워터마크 등 반투명 레이어에 쓴다.
-  globalCompositeOperation?: string; // Konva의 블렌드 모드 지원 (예: screen, luminosity)
+  // 주의: Konva의 globalCompositeOperation(블렌드 모드)은 일부러 노출하지 않는다.
+  // 가져온 템플릿 JSON이 "destination-out" 같은 값을 넣으면 아래 레이어를 지워버리기 때문에,
+  // 실제로 필요해지면 안전한 값만 허용하는 유니온 타입 + templateStore 검증을 함께 추가할 것.
 }
 
 export interface ImageLayer extends BaseLayer {

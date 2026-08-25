@@ -6,6 +6,7 @@ import { LayerPanel } from "./components/layer/LayerPanel";
 import { TemplatePanel } from "./components/template/TemplatePanel";
 import { BaseballTab } from "./components/baseball/BaseballTab";
 import { createEmptyProject } from "./utils/createProject";
+import { textColorDefaultsFor } from "./utils/textDefaults";
 import { loadImageFile, ImageUploadError } from "./features/image/loadImageFile";
 import { createExportFileName, downloadDataUrl } from "./features/export/downloadCanvas";
 import type { ImageLayer, Layer, TextLayer } from "./types/canvas";
@@ -239,6 +240,8 @@ function App() {
   }
 
   function handleAddText() {
+    // 배경이 밝으면 진한 글자, 어두우면 흰 글자 — 흰 배경에 흰 글자가 되어 안 보이던 문제 방지
+    const { color, strokeColor } = textColorDefaultsFor(project.backgroundColor);
     const newLayer: TextLayer = {
       id: crypto.randomUUID(),
       type: "text",
@@ -254,13 +257,13 @@ function App() {
       name: `텍스트 ${project.layers.filter((l) => l.type === "text").length + 1}`,
       fontFamily: "IBM Plex Sans KR",
       fontSize: 64,
-      color: "#ffffff",
+      color,
       bold: true,
       italic: false,
       align: "center",
       lineHeight: 1.3,
       letterSpacing: 0,
-      strokeColor: "#000000",
+      strokeColor,
       strokeWidth: 6,
     };
     setProject((p) => ({ ...p, layers: [...p.layers, newLayer], updatedAt: new Date().toISOString() }));
