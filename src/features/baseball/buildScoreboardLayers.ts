@@ -59,10 +59,10 @@ export function buildScoreboardLayers(game: KboGame, width: number, height: numb
   const awayWatermark = fitAspectRatio(watermarkMaxWidth, watermarkMaxHeight, away.logoAspectRatio);
   const homeWatermark = fitAspectRatio(watermarkMaxWidth, watermarkMaxHeight, home.logoAspectRatio);
   if (away.logoSrc) {
-    layers.push(imageLayer({ zIndex: 0.5, x: width * 0.25 - awayWatermark.width / 2, y: height / 2 - awayWatermark.height / 2, ...awayWatermark, opacity: 0.3, src: away.logoSrc, name: "원정팀 로고 워터마크" }));
+    layers.push(imageLayer({ zIndex: 1.5, x: width * 0.25 - awayWatermark.width / 2, y: height / 2 - awayWatermark.height / 2, ...awayWatermark, opacity: 0.15, src: away.logoSrc, name: "원정팀 로고 워터마크" }));
   }
   if (home.logoSrc) {
-    layers.push(imageLayer({ zIndex: 0.6, x: width * 0.75 - homeWatermark.width / 2, y: height / 2 - homeWatermark.height / 2, ...homeWatermark, opacity: 0.3, src: home.logoSrc, name: "홈팀 로고 워터마크" }));
+    layers.push(imageLayer({ zIndex: 1.6, x: width * 0.75 - homeWatermark.width / 2, y: height / 2 - homeWatermark.height / 2, ...homeWatermark, opacity: 0.15, src: home.logoSrc, name: "홈팀 로고 워터마크" }));
   }
 
   // 사용자가 보낸 형식에 맞게 엠블럼 배지(plate)는 렌더링하지 않고, 팀명 텍스트만 표시합니다.
