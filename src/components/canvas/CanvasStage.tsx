@@ -43,6 +43,12 @@ export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasS
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    // 캔버스는 draw 시점에 이미 로드된 폰트만 쓴다 — 웹폰트 로드가 첫 렌더보다 늦게 끝나면
+    // 다시 그려주지 않는 한 폴백 폰트로 굳어버린다.
+    document.fonts.ready.then(() => stageRef.current?.batchDraw());
+  }, []);
+
   const padding = 32;
   const availableWidth = Math.max(size.width - padding * 2, 1);
   const availableHeight = Math.max(size.height - padding * 2, 1);
@@ -125,7 +131,7 @@ export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasS
               if (layer.type === "shape") {
                 // speechBubble은 아직 어디서도 쓰지 않아 rectangle로 대체 렌더링한다.
                 const shared = {
-                  ref: rememberNode(layer.id), rotation: layer.rotation, visible: layer.visible,
+                  ref: rememberNode(layer.id), rotation: layer.rotation, visible: layer.visible, opacity: layer.opacity ?? 1,
                   listening: !layer.locked, draggable: !layer.locked, fill: layer.fillColor,
                   stroke: layer.strokeColor, strokeWidth: layer.strokeWidth ?? 0,
                   onClick: () => onSelectLayer(layer.id), onTap: () => onSelectLayer(layer.id),
@@ -136,13 +142,13 @@ export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasS
                   const radius = Math.min(layer.width, layer.height) / 2;
                   return <Circle key={layer.id} {...shared} x={layer.x + layer.width / 2} y={layer.y + layer.height / 2} radius={radius} />;
                 }
-                return <Rect key={layer.id} {...shared} x={layer.x} y={layer.y} width={layer.width} height={layer.height} />;
+                return <Rect key={layer.id} {...shared} x={layer.x} y={layer.y} width={layer.width} height={layer.height} cornerRadius={layer.cornerRadius ?? 0} />;
               }
               if (layer.type === "text") {
                 return <KonvaText ref={rememberNode(layer.id)} key={layer.id} x={layer.x} y={layer.y} width={layer.width} height={layer.height}
                   text={layer.text} fontSize={layer.fontSize} fontFamily={layer.fontFamily} fill={layer.color} align={layer.align}
                   fontStyle={[layer.bold ? "bold" : "", layer.italic ? "italic" : ""].filter(Boolean).join(" ") || "normal"}
-                  lineHeight={layer.lineHeight} letterSpacing={layer.letterSpacing} rotation={layer.rotation} visible={layer.visible}
+                  lineHeight={layer.lineHeight} letterSpacing={layer.letterSpacing} rotation={layer.rotation} visible={layer.visible} opacity={layer.opacity ?? 1}
                   listening={!layer.locked} draggable={!layer.locked} stroke={layer.strokeColor} strokeWidth={layer.strokeWidth ?? 0}
                   fillAfterStrokeEnabled={true}
                   onClick={() => onSelectLayer(layer.id)} onTap={() => onSelectLayer(layer.id)}

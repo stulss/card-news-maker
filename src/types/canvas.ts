@@ -24,6 +24,7 @@ export interface BaseLayer {
   visible: boolean;
   locked: boolean;
   name: string;
+  opacity?: number; // 0~1, 기본 1(불투명). 워터마크 등 반투명 레이어에 쓴다.
 }
 
 export interface ImageLayer extends BaseLayer {
@@ -64,6 +65,7 @@ export interface ShapeLayer extends BaseLayer {
   fillColor: string;
   strokeColor?: string;
   strokeWidth?: number;
+  cornerRadius?: number;
 }
 
 export interface ShadowStyle {

@@ -25,6 +25,11 @@ function imageLayer(partial: Omit<ImageLayer, keyof ReturnType<typeof baseFields
   return { type: "image", ...baseFields(zIndex), ...rest };
 }
 
+function fitAspectRatio(maxWidth: number, maxHeight: number, aspectRatio: number) {
+  const width = Math.min(maxWidth, maxHeight * aspectRatio);
+  return { width, height: width / aspectRatio };
+}
+
 function formatDate(dateIso: string): string {
   const [y, m, d] = dateIso.split("-");
   return `${y}.${m}.${d}`;
@@ -47,17 +52,42 @@ export function buildScoreboardLayers(game: KboGame, width: number, height: numb
     shapeLayer({ zIndex: 1, x: width / 2, y: 0, width: width / 2, height, shapeType: "rectangle", fillColor: home.primaryColor, name: "홈팀 배경" }),
   );
 
-  const logoWidth = Math.min(110, width * 0.14);
-  const logoHeight = logoWidth * (128 / 320); // public/logos/*.png는 320x128 캔버스로 통일 (2026-08-25 교체분)
-  const logoY = height * 0.16;
+  // 큰 반투명 로고를 배경 워터마크로 깐다 — 배경(0/1) 바로 위, 그 외 모든 요소 아래.
+  const watermarkMaxWidth = width / 2 * 0.85;
+  const watermarkMaxHeight = height * 0.42;
+  const awayWatermark = fitAspectRatio(watermarkMaxWidth, watermarkMaxHeight, away.logoAspectRatio);
+  const homeWatermark = fitAspectRatio(watermarkMaxWidth, watermarkMaxHeight, home.logoAspectRatio);
   if (away.logoSrc) {
-    layers.push(imageLayer({ zIndex: 2, x: width * 0.25 - logoWidth / 2, y: logoY, width: logoWidth, height: logoHeight, src: away.logoSrc, name: "원정팀 엠블럼" }));
+    layers.push(imageLayer({ zIndex: 0.5, x: width * 0.25 - awayWatermark.width / 2, y: height / 2 - awayWatermark.height / 2, ...awayWatermark, opacity: 0.08, src: away.logoSrc, name: "원정팀 로고 워터마크" }));
   }
   if (home.logoSrc) {
-    layers.push(imageLayer({ zIndex: 3, x: width * 0.75 - logoWidth / 2, y: logoY, width: logoWidth, height: logoHeight, src: home.logoSrc, name: "홈팀 엠블럼" }));
+    layers.push(imageLayer({ zIndex: 0.6, x: width * 0.75 - homeWatermark.width / 2, y: height / 2 - homeWatermark.height / 2, ...homeWatermark, opacity: 0.08, src: home.logoSrc, name: "홈팀 로고 워터마크" }));
   }
 
-  const nameY = logoY + logoHeight + height * 0.02;
+  // 구단별 원본 비율을 유지한 채 공통 영역 안에 contain 배치한다. 배지는 양 팀이 같은 크기를 쓴다.
+  const logoMaxWidth = Math.min(220, width * 0.28);
+  const logoMaxHeight = height * 0.14;
+  const awayLogo = fitAspectRatio(logoMaxWidth, logoMaxHeight, away.logoAspectRatio);
+  const homeLogo = fitAspectRatio(logoMaxWidth, logoMaxHeight, home.logoAspectRatio);
+  const platePaddingX = logoMaxWidth * 0.12;
+  const platePaddingY = logoMaxHeight * 0.18;
+  const plateWidth = logoMaxWidth + platePaddingX * 2;
+  const plateHeight = logoMaxHeight + platePaddingY * 2;
+  const plateY = height * 0.11;
+  if (away.logoSrc) {
+    layers.push(
+      shapeLayer({ zIndex: 1.9, x: width * 0.25 - plateWidth / 2, y: plateY, width: plateWidth, height: plateHeight, shapeType: "rectangle", fillColor: "#ffffff", cornerRadius: plateHeight * 0.18, name: "원정팀 엠블럼 배지" }),
+      imageLayer({ zIndex: 2, x: width * 0.25 - awayLogo.width / 2, y: plateY + (plateHeight - awayLogo.height) / 2, ...awayLogo, src: away.logoSrc, name: "원정팀 엠블럼" }),
+    );
+  }
+  if (home.logoSrc) {
+    layers.push(
+      shapeLayer({ zIndex: 2.9, x: width * 0.75 - plateWidth / 2, y: plateY, width: plateWidth, height: plateHeight, shapeType: "rectangle", fillColor: "#ffffff", cornerRadius: plateHeight * 0.18, name: "홈팀 엠블럼 배지" }),
+      imageLayer({ zIndex: 3, x: width * 0.75 - homeLogo.width / 2, y: plateY + (plateHeight - homeLogo.height) / 2, ...homeLogo, src: home.logoSrc, name: "홈팀 엠블럼" }),
+    );
+  }
+
+  const nameY = plateY + plateHeight + height * 0.02; // 배지 플레이트 하단 아래로 여백
   const nameFontSize = Math.round(width * 0.045);
   layers.push(
     textLayer({ zIndex: 4, x: 0, y: nameY, width: width / 2, height: nameFontSize * 1.4, text: game.away.name, fontFamily: "IBM Plex Sans KR", fontSize: nameFontSize, color: away.textColor, bold: true, italic: false, align: "center", lineHeight: 1.2, letterSpacing: 0, name: "원정팀 이름" }),
