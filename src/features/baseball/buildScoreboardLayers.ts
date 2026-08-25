@@ -53,54 +53,33 @@ export function buildScoreboardLayers(game: KboGame, width: number, height: numb
   );
 
   // 큰 반투명 로고를 배경 워터마크로 깐다 — 배경(0/1) 바로 위, 그 외 모든 요소 아래.
-  const watermarkMaxWidth = width / 2 * 0.85;
-  const watermarkMaxHeight = height * 0.42;
+  // 사용자가 보낸 형식에 맞게 워터마크 크기를 키웁니다.
+  const watermarkMaxWidth = width / 2 * 0.95;
+  const watermarkMaxHeight = height * 0.5;
   const awayWatermark = fitAspectRatio(watermarkMaxWidth, watermarkMaxHeight, away.logoAspectRatio);
   const homeWatermark = fitAspectRatio(watermarkMaxWidth, watermarkMaxHeight, home.logoAspectRatio);
   if (away.logoSrc) {
-    layers.push(imageLayer({ zIndex: 0.5, x: width * 0.25 - awayWatermark.width / 2, y: height / 2 - awayWatermark.height / 2, ...awayWatermark, opacity: 0.08, src: away.logoSrc, name: "원정팀 로고 워터마크" }));
+    layers.push(imageLayer({ zIndex: 0.5, x: width * 0.25 - awayWatermark.width / 2, y: height / 2 - awayWatermark.height / 2, ...awayWatermark, opacity: 0.3, src: away.logoSrc, name: "원정팀 로고 워터마크" }));
   }
   if (home.logoSrc) {
-    layers.push(imageLayer({ zIndex: 0.6, x: width * 0.75 - homeWatermark.width / 2, y: height / 2 - homeWatermark.height / 2, ...homeWatermark, opacity: 0.08, src: home.logoSrc, name: "홈팀 로고 워터마크" }));
+    layers.push(imageLayer({ zIndex: 0.6, x: width * 0.75 - homeWatermark.width / 2, y: height / 2 - homeWatermark.height / 2, ...homeWatermark, opacity: 0.3, src: home.logoSrc, name: "홈팀 로고 워터마크" }));
   }
 
-  // 구단별 원본 비율을 유지한 채 공통 영역 안에 contain 배치한다. 배지는 양 팀이 같은 크기를 쓴다.
-  const logoMaxWidth = Math.min(220, width * 0.28);
-  const logoMaxHeight = height * 0.14;
-  const awayLogo = fitAspectRatio(logoMaxWidth, logoMaxHeight, away.logoAspectRatio);
-  const homeLogo = fitAspectRatio(logoMaxWidth, logoMaxHeight, home.logoAspectRatio);
-  const platePaddingX = logoMaxWidth * 0.12;
-  const platePaddingY = logoMaxHeight * 0.18;
-  const plateWidth = logoMaxWidth + platePaddingX * 2;
-  const plateHeight = logoMaxHeight + platePaddingY * 2;
-  const plateY = height * 0.11;
-  if (away.logoSrc) {
-    layers.push(
-      shapeLayer({ zIndex: 1.9, x: width * 0.25 - plateWidth / 2, y: plateY, width: plateWidth, height: plateHeight, shapeType: "rectangle", fillColor: "#ffffff", cornerRadius: plateHeight * 0.18, name: "원정팀 엠블럼 배지" }),
-      imageLayer({ zIndex: 2, x: width * 0.25 - awayLogo.width / 2, y: plateY + (plateHeight - awayLogo.height) / 2, ...awayLogo, src: away.logoSrc, name: "원정팀 엠블럼" }),
-    );
-  }
-  if (home.logoSrc) {
-    layers.push(
-      shapeLayer({ zIndex: 2.9, x: width * 0.75 - plateWidth / 2, y: plateY, width: plateWidth, height: plateHeight, shapeType: "rectangle", fillColor: "#ffffff", cornerRadius: plateHeight * 0.18, name: "홈팀 엠블럼 배지" }),
-      imageLayer({ zIndex: 3, x: width * 0.75 - homeLogo.width / 2, y: plateY + (plateHeight - homeLogo.height) / 2, ...homeLogo, src: home.logoSrc, name: "홈팀 엠블럼" }),
-    );
-  }
-
-  const nameY = plateY + plateHeight + height * 0.02; // 배지 플레이트 하단 아래로 여백
-  const nameFontSize = Math.round(width * 0.045);
+  // 사용자가 보낸 형식에 맞게 엠블럼 배지(plate)는 렌더링하지 않고, 팀명 텍스트만 표시합니다.
+  const nameY = height * 0.33; 
+  const nameFontSize = Math.round(width * 0.055);
   layers.push(
     textLayer({ zIndex: 4, x: 0, y: nameY, width: width / 2, height: nameFontSize * 1.4, text: game.away.name, fontFamily: "IBM Plex Sans KR", fontSize: nameFontSize, color: away.textColor, bold: true, italic: false, align: "center", lineHeight: 1.2, letterSpacing: 0, name: "원정팀 이름" }),
     textLayer({ zIndex: 5, x: width / 2, y: nameY, width: width / 2, height: nameFontSize * 1.4, text: game.home.name, fontFamily: "IBM Plex Sans KR", fontSize: nameFontSize, color: home.textColor, bold: true, italic: false, align: "center", lineHeight: 1.2, letterSpacing: 0, name: "홈팀 이름" }),
   );
 
-  const centerY = height * 0.42;
+  const centerY = height * 0.44;
   if (game.status === "canceled") {
     layers.push(
       textLayer({ zIndex: 6, x: width * 0.1, y: centerY, width: width * 0.8, height: height * 0.14, text: game.cancelReason ?? "경기 취소", fontFamily: "IBM Plex Sans KR", fontSize: Math.round(width * 0.075), color: "#ffffff", bold: true, italic: false, align: "center", lineHeight: 1.2, letterSpacing: 0, strokeColor: "#000000", strokeWidth: Math.round(width * 0.006), name: "취소 안내" }),
     );
   } else {
-    const scoreFontSize = Math.round(width * 0.11);
+    const scoreFontSize = Math.round(width * 0.14);
     const winner = winnerCode(game);
     layers.push(
       textLayer({ zIndex: 6, x: 0, y: centerY, width, height: scoreFontSize * 1.3, text: `${game.away.score} : ${game.home.score}`, fontFamily: "IBM Plex Sans KR", fontSize: scoreFontSize, color: "#ffffff", bold: true, italic: false, align: "center", lineHeight: 1, letterSpacing: 0, strokeColor: "#000000", strokeWidth: Math.round(width * 0.006), name: "스코어" }),
@@ -108,7 +87,7 @@ export function buildScoreboardLayers(game: KboGame, width: number, height: numb
     if (winner) {
       const badgeX = winner === game.away.code ? width * 0.25 - width * 0.06 : width * 0.75 - width * 0.06;
       layers.push(
-        textLayer({ zIndex: 7, x: badgeX, y: nameY - height * 0.045, width: width * 0.12, height: height * 0.04, text: "WIN", fontFamily: "IBM Plex Sans KR", fontSize: Math.round(width * 0.03), color: "#f4b43e", bold: true, italic: false, align: "center", lineHeight: 1, letterSpacing: 2, name: "승리 배지" }),
+        textLayer({ zIndex: 7, x: badgeX, y: nameY - height * 0.05, width: width * 0.12, height: height * 0.04, text: "WIN", fontFamily: "IBM Plex Sans KR", fontSize: Math.round(width * 0.035), color: "#f4b43e", bold: true, italic: false, align: "center", lineHeight: 1, letterSpacing: 2, name: "승리 배지" }),
       );
     }
   }
