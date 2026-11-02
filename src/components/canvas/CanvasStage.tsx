@@ -25,7 +25,7 @@ interface Props {
   originalViewLayerId?: string | null;
   safeZone?: boolean;
   showEmptyHint?: boolean;
-  gridMode?: "off" | "thirds" | "grid";
+  gridMode?: "off" | "thirds" | "grid" | "golden" | "diagonal";
   rulersVisible?: boolean;
   rulerGuides?: RulerGuide[];
   onAddGuide?: (axis: "x" | "y", position: number) => void;
@@ -191,7 +191,15 @@ export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasS
 
   // 구도 격자: 3분할선 또는 12분할 촘촘한 격자(내보내기에는 찍히지 않음)
   const gridLines: Array<{ key: string; points: number[] }> = [];
-  if (gridMode !== "off") {
+  if (gridMode === "golden") {
+    // 황금비 분할선: 0.382 / 0.618 지점
+    for (const ratio of [0.382, 0.618]) {
+      gridLines.push({ key: `gv${ratio}`, points: [project.width * ratio, 0, project.width * ratio, project.height] });
+      gridLines.push({ key: `gh${ratio}`, points: [0, project.height * ratio, project.width, project.height * ratio] });
+    }
+  } else if (gridMode === "diagonal") {
+    gridLines.push({ key: "d1", points: [0, 0, project.width, project.height] }, { key: "d2", points: [project.width, 0, 0, project.height] });
+  } else if (gridMode === "thirds" || gridMode === "grid") {
     const columns = gridMode === "thirds" ? 3 : 12;
     const rows = gridMode === "thirds" ? 3 : Math.max(2, Math.round((project.height / project.width) * 12));
     for (let i = 1; i < columns; i++) gridLines.push({ key: `v${i}`, points: [(project.width / columns) * i, 0, (project.width / columns) * i, project.height] });

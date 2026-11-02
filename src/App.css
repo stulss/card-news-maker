@@ -354,3 +354,11 @@ kbd { padding: 2px 7px; border: 1px solid var(--color-border); border-radius: 6p
 .welcome-keys { margin: 0; color: var(--color-text-dim); font-size: 12px; }
 .canvas-hint { position: absolute; bottom: 10px; left: 14px; max-width: calc(100% - 200px); overflow: hidden; color: var(--color-text-dim); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; }
 @media (max-width: 900px) { .canvas-hint { display: none; } .welcome-sizes { grid-template-columns: repeat(2, minmax(0, 1fr)); } .welcome-card { transform: translate(-50%, -50%); padding: 18px; } }
+
+/* 프리셋 카테고리 · 레이어 이름 바꾸기 */
+.preset-group { display: flex; flex-direction: column; gap: 5px; }
+.preset-group-label { color: var(--color-text-dim); font-size: 11px; font-weight: 600; letter-spacing: 0.04em; }
+.filter-presets button { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.layer-rename { width: 100%; min-width: 0; padding: 2px 6px; border: 1px solid var(--color-accent); border-radius: 6px; background: var(--color-bg-input); color: var(--color-text); font: inherit; font-size: 12px; font-weight: 600; outline: none; }
+.group-toolbar { flex-wrap: wrap; }
+.group-toolbar button { flex: 1 1 30%; }

@@ -23,7 +23,7 @@ const SHORTCUT_GROUPS: Array<{ title: string; items: Array<{ keys: string; label
       { keys: "Ctrl + K", label: "명령 팔레트" },
       { keys: "Ctrl + E", label: "내보내기 창" },
       { keys: "Shift + R", label: "눈금자 켜기/끄기" },
-      { keys: "Shift + G", label: "구도 격자 (3분할 → 촘촘한 격자 → 끄기)" },
+      { keys: "Shift + G", label: "구도 격자 (3분할 → 격자 → 황금비 → 대각선 → 끄기)" },
       { keys: "? / Ctrl + /", label: "단축키 도움말" },
     ],
   },

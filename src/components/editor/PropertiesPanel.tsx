@@ -48,18 +48,48 @@ interface Props {
   onDelete: () => void;
 }
 
-const FILTER_PRESETS: Array<{ label: string; filters: ImageFilters }> = [
-  { label: "원본", filters: {} },
-  { label: "흑백", filters: { grayscale: true } },
-  { label: "세피아", filters: { sepia: true } },
-  { label: "선명", filters: { contrast: 25, brightness: 0.05 } },
-  { label: "선명 컬러", filters: { saturation: 0.4, contrast: 20 } },
-  { label: "어둡게", filters: { brightness: -0.3 } },
-  { label: "빈티지", filters: { sepia: true, contrast: 10, grain: 25 } },
-  { label: "차가운 톤", filters: { hue: -20, saturation: 0.15, brightness: 0.04 } },
-  { label: "시네마", filters: { contrast: 18, saturation: -0.15, vignette: 45, grain: 14 } },
-  { label: "흐림", filters: { blur: 8 } },
+interface FilterPreset {
+  label: string;
+  filters: ImageFilters;
+}
+
+// LightCraft의 프리셋 패널(흑백·컬러·필름·푸드·풍경·인물)을 참고해 이 프로젝트의 필터로 새로 구성한 룩 모음.
+const PRESET_GROUPS: Array<{ title: string; presets: FilterPreset[] }> = [
+  { title: "흑백", presets: [
+    { label: "하이 콘트라스트", filters: { grayscale: true, contrast: 35 } },
+    { label: "소프트 흑백", filters: { grayscale: true, contrast: -10, brightness: 0.05 } },
+    { label: "세피아 톤", filters: { sepia: true, contrast: 6 } },
+  ] },
+  { title: "컬러", presets: [
+    { label: "웜 글로우", filters: { hue: -12, saturation: 0.15, brightness: 0.04 } },
+    { label: "쿨 모닝", filters: { hue: 18, saturation: -0.05, brightness: 0.04 } },
+    { label: "비비드 팝", filters: { saturation: 0.55, contrast: 18 } },
+    { label: "소프트 파스텔", filters: { saturation: -0.25, brightness: 0.12, contrast: -12 } },
+  ] },
+  { title: "필름", presets: [
+    { label: "페이드 매트", filters: { contrast: -18, brightness: 0.06, saturation: -0.2, grain: 12 } },
+    { label: "웜 필름", filters: { hue: -8, saturation: -0.1, contrast: 8, grain: 22, vignette: 20 } },
+    { label: "빈티지", filters: { sepia: true, contrast: 10, grain: 25 } },
+    { label: "시네마", filters: { contrast: 18, saturation: -0.15, vignette: 45, grain: 14 } },
+  ] },
+  { title: "푸드", presets: [
+    { label: "프레시 브라이트", filters: { brightness: 0.1, saturation: 0.3, contrast: 10 } },
+    { label: "따뜻한 식탁", filters: { hue: -10, saturation: 0.25, brightness: 0.04 } },
+    { label: "다크 무디", filters: { brightness: -0.12, contrast: 28, saturation: -0.1, vignette: 35 } },
+  ] },
+  { title: "풍경", presets: [
+    { label: "선명한 풍경", filters: { contrast: 22, saturation: 0.3 } },
+    { label: "골든 아워", filters: { hue: -14, saturation: 0.3, brightness: 0.05, vignette: 15 } },
+    { label: "차가운 톤", filters: { hue: -20, saturation: 0.15, brightness: 0.04 } },
+  ] },
+  { title: "인물", presets: [
+    { label: "부드러운 피부", filters: { blur: 2, brightness: 0.05, contrast: -8 } },
+    { label: "밝고 산뜻하게", filters: { brightness: 0.14, contrast: -6, saturation: 0.1 } },
+    { label: "어둡게", filters: { brightness: -0.3 } },
+  ] },
 ];
+
+const FILTER_PRESETS: FilterPreset[] = [{ label: "원본", filters: {} }, ...PRESET_GROUPS.flatMap((group) => group.presets)];
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
@@ -177,11 +207,20 @@ function ImageAdjustSection({ layer, onChange, onCompareOriginal }: { layer: Ima
         ◐ 누르는 동안 원본 보기
       </button>
       <div className="filter-presets">
-        {FILTER_PRESETS.map((candidate) => (
-          <button key={candidate.label} type="button" className={preset === candidate.label ? "active" : ""} aria-pressed={preset === candidate.label}
-            onClick={() => { setPreset(candidate.label); setAmount(100); onChange({ filters: scaleFilters(candidate.filters, 1) }); }}>{candidate.label}</button>
-        ))}
+        <button type="button" className={preset === "원본" || preset === null ? "active" : ""} aria-pressed={preset === "원본"}
+          onClick={() => { setPreset("원본"); setAmount(100); onChange({ filters: {} }); }}>원본</button>
       </div>
+      {PRESET_GROUPS.map((group) => (
+        <div key={group.title} className="preset-group">
+          <span className="preset-group-label">{group.title}</span>
+          <div className="filter-presets">
+            {group.presets.map((candidate) => (
+              <button key={candidate.label} type="button" className={preset === candidate.label ? "active" : ""} aria-pressed={preset === candidate.label}
+                onClick={() => { setPreset(candidate.label); setAmount(100); onChange({ filters: scaleFilters(candidate.filters, 1) }); }}>{candidate.label}</button>
+            ))}
+          </div>
+        </div>
+      ))}
       {activePreset && (
         <label className="panel-fields">
           <span className="preset-amount-label">프리셋 강도 <output>{amount}%</output></span>

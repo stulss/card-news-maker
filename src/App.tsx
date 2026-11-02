@@ -92,7 +92,7 @@ function App() {
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [exportSettings, setExportSettings] = useState<ExportSettings>(loadExportSettings);
   const [rulersVisible, setRulersVisible] = useState(false);
-  const [gridMode, setGridMode] = useState<"off" | "thirds" | "grid">("off");
+  const [gridMode, setGridMode] = useState<"off" | "thirds" | "grid" | "golden" | "diagonal">("off");
   const [styleClipboard, setStyleClipboard] = useState<LayerStyle | null>(null);
   const [theme, setTheme] = useState<"dark" | "light">(() => { try { return localStorage.getItem("card-news-theme") === "light" ? "light" : "dark"; } catch { return "dark"; } });
   const [rulerGuides, setRulerGuides] = useState<RulerGuide[]>([]);
@@ -187,6 +187,30 @@ function App() {
     setProject((p) => ({ ...p, layers: p.layers.map((l) => ids.has(l.id) ? { ...l, x: l.x + dx, y: l.y + dy } : l), updatedAt: new Date().toISOString() }), coalesceKey);
   }
 
+  function handleRenameLayer(layerId: string, name: string) {
+    updateLayer(layerId, { name });
+  }
+
+  // 고른 레이어 3개 이상의 간격을 같게 맞춘다(양 끝 두 레이어는 제자리, 가운데가 움직임).
+  function handleDistribute(layerIds: string[], axis: "x" | "y") {
+    const position = axis === "x" ? "x" : "y";
+    const size = axis === "x" ? "width" : "height";
+    setProject((p) => {
+      const targets = p.layers.filter((layer) => layerIds.includes(layer.id) && !layer.locked).sort((a, b) => a[position] - b[position]);
+      if (targets.length < 3) return p;
+      const first = targets[0];
+      const last = targets[targets.length - 1];
+      const total = last[position] + last[size] - first[position];
+      const used = targets.reduce((sum, layer) => sum + layer[size], 0);
+      const gap = (total - used) / (targets.length - 1);
+      const next = new Map<string, number>();
+      let cursor = first[position];
+      for (const layer of targets) { next.set(layer.id, cursor); cursor += layer[size] + gap; }
+      return { ...p, layers: p.layers.map((layer) => next.has(layer.id) ? { ...layer, [position]: next.get(layer.id) } as Layer : layer), updatedAt: new Date().toISOString() };
+    });
+    setStatusMessage(`${layerIds.length}개 레이어의 ${axis === "x" ? "가로" : "세로"} 간격을 같게 맞췄습니다.`);
+  }
+
   function handleGroupLayers(layerIds: string[]) {
     if (layerIds.length < 2) return;
     const ids = new Set(layerIds);
@@ -254,7 +278,10 @@ function App() {
       ? "드래그 이동 · 모서리 핸들로 크기·회전 · 방향키 미세 이동 · Ctrl+D 복제 · Delete 삭제"
       : "레이어를 클릭해 선택 · Ctrl+휠 확대 · Ctrl+K 명령 검색 · ? 단축키";
 
-  const cycleGrid = () => setGridMode((mode) => (mode === "off" ? "thirds" : mode === "thirds" ? "grid" : "off"));
+  const GRID_ORDER = ["off", "thirds", "grid", "golden", "diagonal"] as const;
+  const GRID_LABELS = { off: "끄기", thirds: "3분할", grid: "촘촘한 격자", golden: "황금비", diagonal: "대각선" } as const;
+  const nextGrid = GRID_ORDER[(GRID_ORDER.indexOf(gridMode) + 1) % GRID_ORDER.length];
+  const cycleGrid = () => setGridMode(nextGrid);
 
   function handleAddTextPreset(presetId: string) {
     const preset = TEXT_PRESETS.find((candidate) => candidate.id === presetId);
@@ -773,7 +800,7 @@ function App() {
       { id: "slide-next", group: "슬라이드", label: "다음 슬라이드", shortcut: "PageDown", run: () => selectSlide(Math.min(deck.slides.length - 1, deck.active + 1)) },
       { id: "ig-guide", group: "보기", label: igGuide ? "인스타 안전영역 가이드 끄기" : "인스타 안전영역 가이드 켜기", keywords: "instagram 인스타 safe zone 그리드", run: () => setIgGuide((on) => !on) },
       { id: "new-deck", group: "파일", label: "새로 시작 (현재 작업 지우기)", keywords: "reset new 초기화", run: handleNewDeck },
-      { id: "grid", group: "보기", label: `구도 격자: ${gridMode === "off" ? "3분할 켜기" : gridMode === "thirds" ? "촘촘한 격자로" : "끄기"}`, shortcut: "Shift+G", keywords: "grid thirds 3분할 구도 격자", run: cycleGrid },
+      { id: "grid", group: "보기", label: `구도 격자: ${GRID_LABELS[nextGrid]}으로 전환`, shortcut: "Shift+G", keywords: "grid thirds 3분할 구도 격자", run: cycleGrid },
       { id: "rulers", group: "보기", label: rulersVisible ? "눈금자 끄기" : "눈금자 켜기", shortcut: "Shift+R", keywords: "ruler 가이드", run: () => setRulersVisible((visible) => !visible) },
       { id: "clear-guides", group: "보기", label: "가이드선 모두 지우기", keywords: "guide", run: () => setRulerGuides([]) },
       { id: "export", group: "내보내기", label: "내보내기 창 열기 (PNG·JPG·WebP·워터마크)", shortcut: "Ctrl+E", keywords: "export 다운로드 저장 webp 워터마크", run: () => setIsExportOpen(true) },
@@ -900,6 +927,8 @@ function App() {
               onReorderLayer={handleReorderLayer}
               onGroupLayers={handleGroupLayers}
               onUngroupLayers={handleUngroupLayers}
+              onRenameLayer={handleRenameLayer}
+              onDistribute={handleDistribute}
             />
           )}
           {sidebarTab === "templates" && (

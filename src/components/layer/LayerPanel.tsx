@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { Layer, TextLayer } from "../../types/canvas";
 
 interface Props {
@@ -12,6 +12,8 @@ interface Props {
   onReorderLayer: (fromId: string, toId: string) => void;
   onGroupLayers: (layerIds: string[]) => void;
   onUngroupLayers: (groupIds: string[]) => void;
+  onRenameLayer: (layerId: string, name: string) => void;
+  onDistribute: (layerIds: string[], axis: "x" | "y") => void;
 }
 
 const GROUP_COLORS = ["#f59e0b", "#10b981", "#38bdf8", "#f472b6", "#a78bfa", "#f87171"];
@@ -27,7 +29,11 @@ export function LayerPanel({
   onReorderLayer,
   onGroupLayers,
   onUngroupLayers,
+  onRenameLayer,
+  onDistribute,
 }: Props) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const cancelRename = useRef(false);
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [multiMode, setMultiMode] = useState(false);
@@ -53,6 +59,8 @@ export function LayerPanel({
       <div className="group-toolbar">
         <button type="button" className={multiMode ? "active" : ""} aria-pressed={multiMode} onClick={() => { setMultiMode((on) => !on); setCheckedIds([]); }} title="여러 레이어를 골라 그룹으로 묶습니다 (Ctrl+클릭으로도 선택)">다중 선택</button>
         <button type="button" disabled={checked.length < 2} onClick={() => { onGroupLayers(checked); setCheckedIds([]); setMultiMode(false); }}>그룹 만들기</button>
+        <button type="button" disabled={checked.length < 3} onClick={() => onDistribute(checked, "x")} title="고른 레이어 3개 이상의 가로 간격을 같게">가로 분포</button>
+        <button type="button" disabled={checked.length < 3} onClick={() => onDistribute(checked, "y")} title="고른 레이어 3개 이상의 세로 간격을 같게">세로 분포</button>
         <button type="button" disabled={ungroupTargets.length === 0} onClick={() => { onUngroupLayers(ungroupTargets); setCheckedIds([]); }}>그룹 해제</button>
       </div>
 
@@ -95,9 +103,28 @@ export function LayerPanel({
                 </div>
 
                 <div className="layer-info">
-                  <div className="layer-name" title={layer.name}>
+                  <div className="layer-name" title={`${layer.name} (더블클릭: 이름 바꾸기)`} onDoubleClick={() => { cancelRename.current = false; setEditingId(layer.id); }}>
                     {groupIndex >= 0 && <span className="group-dot" style={{ background: GROUP_COLORS[groupIndex % GROUP_COLORS.length] }} title={`그룹 ${groupIndex + 1}`} />}
-                    {layer.name}
+                    {editingId === layer.id ? (
+                      <input
+                        className="layer-rename"
+                        autoFocus
+                        defaultValue={layer.name}
+                        maxLength={40}
+                        aria-label="레이어 이름"
+                        onClick={(event) => event.stopPropagation()}
+                        onFocus={(event) => event.currentTarget.select()}
+                        onBlur={(event) => {
+                          const name = event.currentTarget.value.trim();
+                          if (!cancelRename.current && name && name !== layer.name) onRenameLayer(layer.id, name);
+                          setEditingId(null);
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") event.currentTarget.blur();
+                          if (event.key === "Escape") { cancelRename.current = true; event.currentTarget.blur(); }
+                        }}
+                      />
+                    ) : layer.name}
                   </div>
                   <div className="layer-sub">
                     {layer.type === "text"

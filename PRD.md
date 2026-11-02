@@ -2074,3 +2074,12 @@ GET /api/kbo-schedule?date=YYYY-MM-DD
 - `ImageFilters.vignette?: number`(0~100), `BLEND_MODES`에 6종 추가(`color-dodge`·`color-burn`·`hard-light`·`soft-light`·`difference`·`exclusion`)
 - 내보내기 설정(브라우저 저장)의 `watermark.kind: "text" | "image"`, `watermark.image?`(PNG data URL, 상한 약 900KB)
 
+### 48-1. 실제 앱 조작 확인 후 추가 (2026-11-02)
+
+| ID | 기능 | 요약 |
+|---|---|---|
+| F-78 | 프리셋 카테고리 | 이미지 프리셋 18종을 흑백·컬러·필름·푸드·풍경·인물로 묶어 표시, 강도 슬라이더 유지 |
+| F-79 | 구도 격자 확장 | 3분할·격자에 황금비(0.382/0.618)·대각선 추가 |
+| F-80 | 레이어 이름 바꾸기 | 레이어 목록에서 이름 더블클릭 → Enter/Esc |
+| F-81 | 분포 | 다중 선택한 레이어 3개 이상의 가로/세로 간격을 같게(양 끝은 고정) |
+
