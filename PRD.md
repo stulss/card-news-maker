@@ -2031,3 +2031,25 @@ GET /api/kbo-schedule?date=YYYY-MM-DD
 
 인스타그램 자동 게시, 로그인, 서버 전송은 만들지 않는다.
 
+---
+
+## 47. 그래픽·디자인 고도화 (2026-11-02)
+
+상세 사용법·구현 메모는 `docs/09_디자인_가이드.md`.
+
+| ID | 기능 | 요약 |
+|---|---|---|
+| F-60 | 그라디언트 | 캔버스 배경·도형 채우기에 선형 그라디언트(두 색·각도), 프리셋 12종, 모든 슬라이드에 적용 |
+| F-61 | 벡터 도형 | 하트·말풍선·화살표·번개·북마크(SVG 경로) 추가, 별·삼각형·원은 타원/비율 유지 |
+| F-62 | 레이어 효과 | 모든 레이어 공통 그림자, 이미지 모서리 둥글기·테두리, 텍스트 줄/글자 간격 |
+| F-63 | 텍스트 프리셋 | 헤드라인·본문·큰 숫자·인용구·아웃라인·그림자 제목·배지·형광펜(배경 밝기에 맞춘 글자색) |
+| F-64 | 디자인 템플릿 | 그라디언트·도형·그림자를 쓴 템플릿 8종, 캐러셀 세트 표지 개선 |
+| F-65 | 테마·UI | 라이트/다크 테마, 포커스 링·전환 효과·스크롤바, 새 파비콘·문서 메타 |
+
+### 21장 데이터 구조 변경 (모두 선택 필드, 하위 호환)
+
+- `CanvasProject.backgroundGradient?: GradientFill`, 새 `GradientFill { from, to, angle }`
+- `BaseLayer.shadow?: ShadowStyle`(모든 레이어), `ImageLayer.cornerRadius?/borderColor?/borderWidth?`
+- `ShapeLayer.fillGradient?`, `shapeType`에 `heart|bubble|arrow|bolt|bookmark` 추가
+- 템플릿 검증(`templateStore`)과 자동 저장 복원 검증이 위 필드의 형식·범위를 확인한다.
+

@@ -42,6 +42,16 @@ export function TextStylePanel({ layer, onChange }: Props) {
           </label>
 
           <label>
+            <span>줄 간격 <output>{layer.lineHeight.toFixed(2)}</output></span>
+            <input type="range" min="0.8" max="2.4" step="0.05" value={layer.lineHeight} onChange={(event) => onChange({ lineHeight: Number(event.target.value) })} />
+          </label>
+
+          <label>
+            <span>글자 간격 <output>{layer.letterSpacing}</output></span>
+            <input type="range" min="-5" max="40" value={layer.letterSpacing} onChange={(event) => onChange({ letterSpacing: Number(event.target.value) })} />
+          </label>
+
+          <label>
             <span>글자 색상</span>
             <div className="color-field">
               <input type="color" value={layer.color} onChange={(event) => onChange({ color: event.target.value })} />

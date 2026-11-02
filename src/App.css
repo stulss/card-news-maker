@@ -94,7 +94,7 @@
 .canvas-stage-area { position: relative; display: flex; min-width: 0; flex: 1; }
 .canvas-scroll {
   display: flex; min-width: 0; flex: 1; overflow: auto; background-color: var(--color-bg-canvas-area);
-  background-image: radial-gradient(oklch(0.30 0.01 275) 1px, transparent 1px); background-size: 20px 20px;
+  background-image: radial-gradient(var(--color-grid) 1px, transparent 1px); background-size: 20px 20px;
 }
 .canvas-scroll > .canvas-shadow { margin: auto; }
 .zoom-controls { position: absolute; right: 16px; bottom: 16px; display: flex; align-items: center; padding: 3px; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-bg-panel); box-shadow: 0 6px 20px oklch(0 0 0 / 0.4); }
@@ -214,7 +214,7 @@
 /* 모달 · 명령 팔레트 · 내보내기 · 눈금자 */
 .modal-backdrop { position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; padding: 16px; background: oklch(0 0 0 / 0.6); }
 .palette-backdrop { place-items: start center; padding-top: 14vh; }
-.modal { display: flex; max-height: calc(100vh - 32px); flex-direction: column; overflow: hidden; border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-bg-panel); box-shadow: 0 24px 80px oklch(0 0 0 / 0.6); }
+.modal { display: flex; max-height: calc(100vh - 32px); flex-direction: column; overflow: hidden; border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-bg-panel); box-shadow: var(--shadow-pop); }
 .modal-header, .modal-footer { display: flex; flex-shrink: 0; align-items: center; gap: 8px; padding: 14px 18px; }
 .modal-header { justify-content: space-between; border-bottom: 1px solid var(--color-border); }
 .modal-header h2 { margin: 0; font-size: 15px; }
@@ -244,7 +244,7 @@ kbd { padding: 2px 7px; border: 1px solid var(--color-border); border-radius: 6p
 
 .export-dialog { width: min(760px, 100%); }
 .export-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
-.export-preview { display: grid; min-height: 260px; place-items: center; overflow: hidden; border: 1px solid var(--color-border); border-radius: 12px; background-color: var(--color-bg-canvas-area); background-image: radial-gradient(oklch(0.30 0.01 275) 1px, transparent 1px); background-size: 16px 16px; color: var(--color-text-dim); font-size: 12px; text-align: center; }
+.export-preview { display: grid; min-height: 260px; place-items: center; overflow: hidden; border: 1px solid var(--color-border); border-radius: 12px; background-color: var(--color-bg-canvas-area); background-image: radial-gradient(var(--color-grid) 1px, transparent 1px); background-size: 16px 16px; color: var(--color-text-dim); font-size: 12px; text-align: center; }
 .export-preview img { max-width: 100%; max-height: 380px; object-fit: contain; }
 .export-options { display: flex; flex-direction: column; gap: 14px; }
 .field-group { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; border: 0; }
@@ -300,3 +300,29 @@ kbd { padding: 2px 7px; border: 1px solid var(--color-border); border-radius: 6p
 .progress-modal { gap: 10px; padding: 22px 26px; min-width: 260px; text-align: center; }
 .progress-bar { height: 6px; overflow: hidden; border-radius: 3px; background: var(--color-bg-input); }
 .progress-bar div { height: 100%; background: var(--gradient-accent); transition: width 0.2s ease; }
+
+/* 그라디언트 편집기 · 텍스트 프리셋 · 도형 아이콘 · 디자인 다듬기 */
+.gradient-editor { gap: 10px; }
+.gradient-preview { height: 36px; border: 1px solid var(--color-border); border-radius: 10px; }
+.gradient-arrow { color: var(--color-text-dim); }
+.swap-btn { width: 34px; height: 30px; padding: 0; margin-left: auto; font-size: 14px; }
+.gradient-presets { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.gradient-presets button { aspect-ratio: 1; padding: 0; border: 2px solid transparent; border-radius: 10px; outline: 1px solid var(--color-border); cursor: pointer; }
+.gradient-presets button:hover { transform: scale(1.1); outline-color: var(--color-accent); }
+.shape-icon svg, svg.shape-icon { width: 34px; height: 34px; }
+.text-preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.text-preset { display: flex; min-height: 92px; flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 12px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-bg-input); color: var(--color-text); cursor: pointer; text-align: left; }
+.text-preset:hover { border-color: var(--color-accent); transform: translateY(-2px); }
+.text-preset-sample { max-width: 100%; overflow: hidden; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
+.text-preset-name { color: var(--color-text-dim); font-size: 11px; }
+.gallery-card:hover .thumb { box-shadow: 0 10px 30px oklch(0 0 0 / 0.25); }
+.tool-rail button.active { position: relative; }
+.tool-rail button.active::before { position: absolute; top: 20%; bottom: 20%; left: -6px; width: 3px; border-radius: 0 3px 3px 0; background: var(--gradient-accent); content: ""; }
+.panel-section h3 { color: var(--color-text-dim); }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.canvas-shadow { border-radius: 2px; }
+:root[data-theme="light"] .canvas-shadow { box-shadow: 0 0 0 1px oklch(0 0 0 / 0.08), 0 18px 50px oklch(0.3 0.04 275 / 0.25); }
+:root[data-theme="light"] .ruler { --ruler-bg: oklch(0.96 0.006 275); --ruler-tick: oklch(0.5 0.02 275); }
+:root[data-theme="light"] .tool-rail button.active { color: var(--color-accent-soft); }
+:root[data-theme="light"] .banner { background: oklch(0.93 0.06 160); color: oklch(0.32 0.08 160); }
+:root[data-theme="light"] .banner.error { background: oklch(0.93 0.05 25); color: oklch(0.38 0.14 25); }

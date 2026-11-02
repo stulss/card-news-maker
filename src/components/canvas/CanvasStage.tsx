@@ -1,6 +1,8 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import Konva from "konva";
-import { Stage, Layer as KonvaLayer, Group, Rect, Ellipse, Star, RegularPolygon, Line, Text as KonvaText, Transformer } from "react-konva";
+import { Stage, Layer as KonvaLayer, Group, Rect, Ellipse, Star, RegularPolygon, Path, Line, Text as KonvaText, Transformer } from "react-konva";
+import { konvaGradient } from "../../features/design/gradients";
+import { PATH_SHAPES, isPathShape } from "../../features/design/shapes";
 import { Rulers } from "./Rulers";
 import type { RulerGuide } from "./Rulers";
 import type { BlendMode, CanvasProject, Layer, ShapeLayer } from "../../types/canvas";
@@ -264,6 +266,11 @@ export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasS
   };
 
   const commitTransform = (layer: Layer, node: Konva.Node) => {
+    if (layer.type === "shape" && isPathShape(layer.shapeType)) {
+      // 경로 도형은 100×100 좌표계를 scale로 늘려 그리므로, scale이 곧 크기다(다시 그릴 때 props가 같은 scale을 만든다).
+      onChangeLayer(layer.id, { x: node.x(), y: node.y(), width: Math.max(10, 100 * node.scaleX()), height: Math.max(10, 100 * node.scaleY()), rotation: node.rotation() } as Partial<Layer>);
+      return;
+    }
     const transform = readNodeTransform(node);
     if (isCenterShape(layer)) {
       // 원·별·삼각형은 노드 좌표가 중심이라 레이어의 좌상단 좌표로 바꿔 저장한다. 별·삼각형은 정사각형을 유지한다.
@@ -288,19 +295,27 @@ export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasS
           onMouseDown={(event) => { if (event.target === event.target.getStage()) onSelectLayer(null); }}
           onTouchStart={(event) => { if (event.target === event.target.getStage()) onSelectLayer(null); }}>
           <KonvaLayer ref={contentLayerRef}>
-            <Rect x={0} y={0} width={project.width} height={project.height} fill={project.backgroundColor} listening={false} />
+            <Rect x={0} y={0} width={project.width} height={project.height} listening={false}
+              {...(project.backgroundGradient ? konvaGradient(project.backgroundGradient, project.width, project.height) : { fill: project.backgroundColor })} />
             {sortedLayers.length === 0 && <KonvaText text="이미지를 업로드하거나 텍스트를 추가해 보세요" x={0} y={project.height / 2 - 16} width={project.width} align="center" fontSize={28} fill="#B8B8B8" listening={false} />}
             {sortedLayers.map((layer) => {
               if (layer.type === "image") {
                 return <ImageLayerNode key={layer.id} layer={layer} cropMode={cropLayerId === layer.id} ignoreFilters={originalViewLayerId === layer.id} onCropChange={(changes, key) => onChangeLayer(layer.id, changes, key)} nodeRef={rememberNode(layer.id)} onSelect={() => onSelectLayer(layer.id)} onDragEnd={(node) => commitMove(layer, node)} onTransformEnd={(node) => commitTransform(layer, node)} />;
               }
               if (layer.type === "shape") {
-                // speechBubble은 아직 어디서도 쓰지 않아 rectangle로 대체 렌더링한다.
+                const centered = layer.shapeType === "circle" || layer.shapeType === "star" || layer.shapeType === "triangle";
+                const pathShape = isPathShape(layer.shapeType);
+                // 그라디언트가 있으면 fill을 주지 않는다(fill이 우선하므로). 경로 도형은 100×100 좌표계 기준이다.
+                const fillProps = layer.fillGradient
+                  ? konvaGradient(layer.fillGradient, pathShape ? 100 : layer.width, pathShape ? 100 : layer.height, centered)
+                  : { fill: layer.fillColor };
                 const shared = {
                   ref: rememberNode(layer.id), rotation: layer.rotation, visible: layer.visible, opacity: layer.opacity ?? 1,
                   globalCompositeOperation: (layer.blendMode ?? "source-over") as BlendMode | "source-over",
-                  listening: !layer.locked, draggable: !layer.locked, fill: layer.fillColor,
+                  listening: !layer.locked, draggable: !layer.locked, ...fillProps,
                   stroke: layer.strokeColor, strokeWidth: layer.strokeWidth ?? 0,
+                  shadowEnabled: !!layer.shadow, shadowColor: layer.shadow?.color, shadowBlur: layer.shadow?.blur ?? 0,
+                  shadowOffsetX: layer.shadow?.offsetX ?? 0, shadowOffsetY: layer.shadow?.offsetY ?? 0,
                   onClick: () => onSelectLayer(layer.id), onTap: () => onSelectLayer(layer.id),
                   onDragEnd: (event: Konva.KonvaEventObject<DragEvent>) => commitMove(layer, event.target),
                   onTransformEnd: (event: Konva.KonvaEventObject<Event>) => commitTransform(layer, event.target),
@@ -308,6 +323,7 @@ export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasS
                 const cx = layer.x + layer.width / 2;
                 const cy = layer.y + layer.height / 2;
                 const radius = Math.min(layer.width, layer.height) / 2;
+                if (pathShape) return <Path key={layer.id} {...shared} data={PATH_SHAPES[layer.shapeType as keyof typeof PATH_SHAPES]} x={layer.x} y={layer.y} scaleX={layer.width / 100} scaleY={layer.height / 100} strokeScaleEnabled={false} lineJoin="round" />;
                 if (layer.shapeType === "circle") return <Ellipse key={layer.id} {...shared} x={cx} y={cy} radiusX={layer.width / 2} radiusY={layer.height / 2} />;
                 if (layer.shapeType === "star") return <Star key={layer.id} {...shared} x={cx} y={cy} numPoints={5} innerRadius={radius * 0.45} outerRadius={radius} />;
                 if (layer.shapeType === "triangle") return <RegularPolygon key={layer.id} {...shared} x={cx} y={cy} sides={3} radius={radius} />;

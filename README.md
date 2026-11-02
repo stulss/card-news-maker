@@ -15,8 +15,9 @@
 | 파일 | 용도 |
 |---|---|
 | `작업내역_체크리스트.md` | **진행 상황·결정 기록·작업 로그.** AI 공용 인수인계 파일이자 단일 진실 공급원 |
+| `docs/09_디자인_가이드.md` | 디자인 시스템·그래픽 도구·구현 메모 |
 | `docs/08_인스타그램_사용가이드.md` | 인스타 규격·작업 순서·업로드 방법·한계 |
-| `PRD.md` | 개발요청서 46장. 기능 요구사항·화면 설계·데이터 구조(43·44장 야구/백엔드는 폐기, 45장이 2차 기능) |
+| `PRD.md` | 개발요청서 47장. 기능 요구사항·화면 설계·데이터 구조(43·44장 야구/백엔드는 폐기, 45장이 2차 기능) |
 | `CLAUDE.md` | AI가 폴더를 통째로 읽지 않도록 하는 토큰 절약 규칙 |
 | `AGENTS.md` / `GEMINI.md` | Codex·Antigravity 프로젝트 진입 지침 |
 | `docs/01_기획.md` | 구현된 아키텍처·기술 선택 요약 |
@@ -53,7 +54,7 @@
 
 ```text
 card-news-maker/
-├── PRD.md                       # 개발요청서 46장
+├── PRD.md                       # 개발요청서 47장
 ├── CLAUDE.md                    # AI 작업 규칙
 ├── AGENTS.md / GEMINI.md        # Codex / Antigravity 진입 지침
 ├── README.md
@@ -71,6 +72,7 @@ card-news-maker/
     ├── components/editor/       # PropertiesPanel(공통 투명도·이미지 보정), TextStylePanel
     ├── components/layer/        # LayerPanel
     ├── components/template/     # TemplatePanel(내 템플릿), GalleryPanel(갤러리)(내 템플릿), GalleryPanel(갤러리)
+    ├── components/text/         # TextPanel — 텍스트 스타일 프리셋
     ├── components/slides/       # SlideStrip — 슬라이드 목록
     ├── components/common/       # LayerThumb — 갤러리·슬라이드 공용 썸네일
     ├── components/shape/        # ShapePanel — 도형 추가
@@ -78,6 +80,7 @@ card-news-maker/
     ├── components/command/      # CommandPalette — Ctrl+K
     ├── components/help/         # ShortcutHelp — 단축키 도움말
     ├── components/meme/         # MemePanel — 자막 프리셋·이모지 스티커
+    ├── features/design/         # gradients·shapes·textPresets — 그래픽 도구 모듈
     ├── features/deck/           # Deck(슬라이드 묶음)·복제·크기 동기화
     ├── features/autosave/       # deckStore — IndexedDB 자동 저장·복원
     ├── features/export/         # exportImage(워터마크·페이지 번호), zip, downloadCanvas
@@ -123,6 +126,9 @@ card-news-maker/
 | 인스타 내보내기 | 전체 장 ZIP(`01.jpg…`), 페이지 번호, JPG 92·1080px 원클릭, 캡션·해시태그 카운터, 모바일 공유 |
 | 안전영역 가이드 | `IG` 버튼 — 스토리 UI 영역·프로필 그리드(3:4) 잘림 표시 |
 | 자동 저장 | 작업 전체(사진 포함)를 브라우저에 자동 저장·복원 |
+| 그라디언트·도형 | 배경·도형 그라디언트(프리셋 12종), 하트·말풍선·화살표·번개·북마크 벡터 도형 |
+| 효과 | 모든 레이어 그림자, 이미지 모서리·테두리, 텍스트 스타일 프리셋(헤드라인·형광펜·배지 등) |
+| 테마 | 다크/라이트 전환(☀/☾) |
 | 단축키 | Ctrl+D 복제, Delete 삭제, 방향키 1px(Shift 10px) 이동, Esc 선택 해제 |
 
 ## 범위 밖

@@ -20,7 +20,7 @@ export function SlideStrip({ slides, active, onSelect, onAdd, onDuplicate, onDel
       <div className="slide-list">
         {slides.map((slide, index) => (
           <button key={slide.id} type="button" className={`slide-item ${index === active ? "active" : ""}`} aria-pressed={index === active} aria-label={`${index + 1}번 슬라이드`} style={{ width: `${(64 * slide.width) / slide.height}px` }} onClick={() => onSelect(index)}>
-            <LayerThumb width={slide.width} height={slide.height} backgroundColor={slide.backgroundColor} layers={slide.layers} />
+            <LayerThumb width={slide.width} height={slide.height} backgroundColor={slide.backgroundColor} backgroundGradient={slide.backgroundGradient} layers={slide.layers} />
             <span className="slide-number">{index + 1}</span>
           </button>
         ))}

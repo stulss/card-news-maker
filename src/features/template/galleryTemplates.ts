@@ -1,9 +1,10 @@
-import type { CanvasProject, Layer, ShapeLayer, TextLayer } from "../../types/canvas";
+import type { CanvasProject, GradientFill, Layer, ShapeLayer, TextLayer } from "../../types/canvas";
+import { GRADIENT_PRESETS } from "../design/gradients";
 
 export const GALLERY_CATEGORIES = ["전체", "카드뉴스", "밈", "공지", "SNS"] as const;
 export type GalleryCategory = Exclude<(typeof GALLERY_CATEGORIES)[number], "전체">;
 
-export type GalleryCanvas = Pick<CanvasProject, "width" | "height" | "backgroundColor" | "layers">;
+export type GalleryCanvas = Pick<CanvasProject, "width" | "height" | "backgroundColor" | "backgroundGradient" | "layers">;
 
 export interface GalleryTemplate {
   id: string;
@@ -27,15 +28,21 @@ function box(name: string, rect: Rect, fillColor: string, style: Partial<ShapeLa
   return { id: crypto.randomUUID(), type: "shape", shapeType: "rectangle", name, ...rect, rotation: 0, zIndex: 0, visible: true, locked: false, fillColor, ...style };
 }
 
-function make(id: string, name: string, category: GalleryCategory, width: number, height: number, backgroundColor: string, layers: Layer[]): GalleryTemplate {
-  return { id, name, category, canvas: { width, height, backgroundColor, layers: layers.map((layer, index) => ({ ...layer, zIndex: index })) } };
+function shape(name: string, shapeType: ShapeLayer["shapeType"], rect: Rect, fillColor: string, style: Partial<ShapeLayer> = {}): ShapeLayer {
+  return { id: crypto.randomUUID(), type: "shape", shapeType, name, ...rect, rotation: 0, zIndex: 0, visible: true, locked: false, fillColor, ...style };
 }
 
-function canvasOf(width: number, height: number, backgroundColor: string, layers: Layer[]): GalleryCanvas {
-  return { width, height, backgroundColor, layers: layers.map((layer, index) => ({ ...layer, zIndex: index })) };
+const preset = (name: string): GradientFill => (GRADIENT_PRESETS.find((candidate) => candidate.name === name) ?? GRADIENT_PRESETS[0]).value;
+
+function make(id: string, name: string, category: GalleryCategory, width: number, height: number, backgroundColor: string, layers: Layer[], backgroundGradient?: GradientFill): GalleryTemplate {
+  return { id, name, category, canvas: { width, height, backgroundColor, ...(backgroundGradient ? { backgroundGradient } : {}), layers: layers.map((layer, index) => ({ ...layer, zIndex: index })) } };
 }
 
-interface SetTheme { bg: string; ink: string; sub: string; accent: string }
+function canvasOf(width: number, height: number, backgroundColor: string, layers: Layer[], backgroundGradient?: GradientFill): GalleryCanvas {
+  return { width, height, backgroundColor, ...(backgroundGradient ? { backgroundGradient } : {}), layers: layers.map((layer, index) => ({ ...layer, zIndex: index })) };
+}
+
+interface SetTheme { bg: string; ink: string; sub: string; accent: string; gradient?: GradientFill }
 
 /** 인스타 캐러셀용 여러 장 세트: 표지 → 본문 N장 → 마무리. 4:5(1080×1350) 기준. 페이지 번호는 내보내기 옵션으로 넣는다. */
 function makeSlideSet(id: string, name: string, theme: SetTheme, bodyCount: number, topic: string): GalleryTemplate {
@@ -46,7 +53,9 @@ function makeSlideSet(id: string, name: string, theme: SetTheme, bodyCount: numb
     text("제목", `${topic}\n핵심만 정리`, { x: 80, y: 350, width: 920, height: 420 }, { fontSize: 124, color: theme.ink, align: "left" }),
     text("부제", "한 줄 소개를 입력하세요", { x: 80, y: 800, width: 920, height: 120 }, { fontSize: 46, bold: false, color: theme.sub, align: "left" }),
     text("안내", "옆으로 넘겨서 확인하세요 →", { x: 80, y: 1100, width: 920, height: 70 }, { fontSize: 38, color: theme.accent, align: "left" }),
-  ]);
+    shape("장식 원", "circle", { x: 640, y: -160, width: 640, height: 640 }, theme.accent, { opacity: 0.18 }),
+    shape("장식 원 2", "circle", { x: -220, y: 960, width: 520, height: 520 }, theme.accent, { opacity: 0.12 }),
+  ], theme.gradient);
   const bodies = Array.from({ length: bodyCount }, (_, i) => canvasOf(W, H, theme.bg, [
     text("번호", String(i + 1).padStart(2, "0"), { x: 80, y: 130, width: 400, height: 200 }, { fontSize: 170, color: theme.accent, align: "left" }),
     box("구분선", { x: 80, y: 360, width: 920, height: 6 }, theme.sub, { opacity: 0.4 }),
@@ -57,21 +66,78 @@ function makeSlideSet(id: string, name: string, theme: SetTheme, bodyCount: numb
     text("마무리", "도움이 되셨나요?", { x: 80, y: 380, width: 920, height: 160 }, { fontSize: 96, color: theme.ink }),
     text("행동 유도", "저장 · 공유 · 팔로우", { x: 80, y: 600, width: 920, height: 110 }, { fontSize: 62, color: theme.accent }),
     text("계정", "@my_account", { x: 80, y: 780, width: 920, height: 80 }, { fontSize: 44, bold: false, color: theme.sub }),
-  ]);
+    shape("하트", "heart", { x: 440, y: 150, width: 200, height: 184 }, theme.accent, { opacity: 0.9 }),
+  ], theme.gradient);
   const slides = [cover, ...bodies, outro];
   return { id, name, category: "카드뉴스", canvas: cover, slides };
 }
 
+function createDesignTemplates(): GalleryTemplate[] {
+  return [
+    make("design-aurora-quote", "오로라 인용구", "SNS", 1080, 1350, "#8b5cf6", [
+      text("따옴표", "“", { x: 70, y: 120, width: 300, height: 360 }, { fontSize: 420, align: "left", opacity: 0.35 }),
+      text("인용문", "오늘 하루도\n충분히 잘했어요", { x: 90, y: 480, width: 900, height: 360 }, { fontSize: 104, lineHeight: 1.3, shadow: { offsetX: 0, offsetY: 8, blur: 24, color: "rgba(0, 0, 0, 0.25)" } }),
+      shape("구분선", "rectangle", { x: 490, y: 900, width: 100, height: 8 }, "#ffffff", { opacity: 0.8 }),
+      text("계정", "@my_account", { x: 90, y: 960, width: 900, height: 80 }, { fontSize: 40, bold: false, opacity: 0.85 }),
+    ], preset("오로라")),
+    make("design-glass-headline", "글래스 헤드라인", "카드뉴스", 1080, 1350, "#0f172a", [
+      shape("글로우", "circle", { x: 560, y: 40, width: 620, height: 620 }, "#ec4899", { opacity: 0.35 }),
+      shape("글래스 카드", "rectangle", { x: 70, y: 330, width: 940, height: 760 }, "#ffffff", { opacity: 0.12, cornerRadius: 56, strokeColor: "#ffffff", strokeWidth: 2, shadow: { offsetX: 0, offsetY: 24, blur: 60, color: "rgba(0, 0, 0, 0.35)" } }),
+      shape("태그", "rectangle", { x: 130, y: 400, width: 220, height: 70 }, "#a78bfa", { cornerRadius: 35 }),
+      text("태그 글자", "TREND", { x: 130, y: 413, width: 220, height: 50 }, { fontSize: 34, align: "center", letterSpacing: 3 }),
+      text("제목", "지금 가장 뜨거운\n한 가지 이야기", { x: 130, y: 530, width: 820, height: 330 }, { fontSize: 92, lineHeight: 1.2 }),
+      text("부제", "핵심만 짧게 정리했어요", { x: 130, y: 920, width: 820, height: 80 }, { fontSize: 44, bold: false, color: "#cbd5e1" }),
+    ], preset("미드나잇")),
+    make("design-sale", "SALE 배너", "공지", 1080, 1080, "#f97316", [
+      shape("별", "star", { x: 640, y: 70, width: 340, height: 340 }, "#fde047", { rotation: 14, shadow: { offsetX: 0, offsetY: 14, blur: 30, color: "rgba(0, 0, 0, 0.25)" } }),
+      text("SALE", "SALE", { x: 70, y: 260, width: 940, height: 300 }, { fontSize: 320, align: "left", letterSpacing: -6, shadow: { offsetX: 0, offsetY: 14, blur: 30, color: "rgba(0, 0, 0, 0.25)" } }),
+      text("혜택", "최대 50% 할인", { x: 70, y: 610, width: 940, height: 110 }, { fontSize: 88, align: "left" }),
+      shape("버튼", "rectangle", { x: 70, y: 800, width: 440, height: 130 }, "#ffffff", { cornerRadius: 65, shadow: { offsetX: 0, offsetY: 12, blur: 24, color: "rgba(0, 0, 0, 0.25)" } }),
+      text("버튼 글자", "지금 확인하기", { x: 70, y: 832, width: 440, height: 70 }, { fontSize: 48, color: "#ea580c", align: "center" }),
+    ], preset("선셋")),
+    make("design-review", "후기 말풍선", "SNS", 1080, 1080, "#fbcfe8", [
+      shape("말풍선", "bubble", { x: 90, y: 110, width: 900, height: 700 }, "#ffffff", { shadow: { offsetX: 0, offsetY: 20, blur: 50, color: "rgba(80, 40, 120, 0.25)" } }),
+      text("별점", "★★★★★", { x: 160, y: 200, width: 760, height: 100 }, { fontSize: 84, color: "#f59e0b", align: "left", letterSpacing: 6 }),
+      text("후기", "정말 만족스러워요!\n다음에도 꼭 다시 쓸게요.", { x: 160, y: 340, width: 760, height: 280 }, { fontSize: 66, color: "#1f2937", align: "left", lineHeight: 1.4 }),
+      text("작성자", "— 김OO 님", { x: 90, y: 880, width: 900, height: 70 }, { fontSize: 44, color: "#831843", align: "left" }),
+    ], preset("코튼캔디")),
+    make("design-dday", "D-DAY 카운트", "공지", 1080, 1080, "#111827", [
+      shape("링", "circle", { x: 180, y: 130, width: 720, height: 720 }, "rgba(0,0,0,0)", { strokeColor: "#a78bfa", strokeWidth: 18 }),
+      shape("링 안쪽", "circle", { x: 230, y: 180, width: 620, height: 620 }, "#ffffff", { opacity: 0.06 }),
+      text("D-DAY", "D-7", { x: 180, y: 360, width: 720, height: 260 }, { fontSize: 250, letterSpacing: -4 }),
+      text("라벨", "오픈까지", { x: 180, y: 250, width: 720, height: 80 }, { fontSize: 52, bold: false, color: "#c4b5fd" }),
+      text("날짜", "00월 00일 오픈", { x: 180, y: 640, width: 720, height: 80 }, { fontSize: 48, bold: false, color: "#e5e7eb" }),
+    ], preset("차콜")),
+    make("design-heart", "하트 감성", "SNS", 1080, 1350, "#ddd6fe", [
+      shape("하트", "heart", { x: 290, y: 190, width: 500, height: 460 }, "#ec4899", { shadow: { offsetX: 0, offsetY: 30, blur: 60, color: "rgba(236, 72, 153, 0.45)" } }),
+      shape("하트 작은", "heart", { x: 130, y: 120, width: 130, height: 120 }, "#f9a8d4", { rotation: -18 }),
+      shape("하트 작은 2", "heart", { x: 830, y: 560, width: 110, height: 100 }, "#f9a8d4", { rotation: 16 }),
+      text("문구", "고마워요,\n늘 곁에 있어줘서", { x: 90, y: 760, width: 900, height: 300 }, { fontSize: 92, color: "#4c1d95", lineHeight: 1.3 }),
+    ], preset("라벤더")),
+    make("design-swipe", "스와이프 안내", "카드뉴스", 1080, 1350, "#06b6d4", [
+      text("제목", "다음 장에서\n이어집니다", { x: 80, y: 360, width: 920, height: 380 }, { fontSize: 124, align: "left", lineHeight: 1.2 }),
+      shape("화살표", "arrow", { x: 640, y: 860, width: 340, height: 220 }, "#ffffff", { shadow: { offsetX: 0, offsetY: 16, blur: 36, color: "rgba(0, 0, 0, 0.25)" } }),
+      text("안내", "옆으로 넘겨 보세요", { x: 80, y: 900, width: 520, height: 80 }, { fontSize: 48, bold: false, align: "left" }),
+    ], preset("오션")),
+    make("design-tip", "번개 팁", "카드뉴스", 1080, 1350, "#fef3c7", [
+      shape("번개", "bolt", { x: 90, y: 150, width: 260, height: 380 }, "#f59e0b", { shadow: { offsetX: 8, offsetY: 14, blur: 0, color: "rgba(180, 83, 9, 0.35)" } }),
+      text("TIP", "TIP", { x: 400, y: 190, width: 580, height: 240 }, { fontSize: 230, align: "left", color: "#92400e", letterSpacing: -3 }),
+      shape("카드", "rectangle", { x: 80, y: 600, width: 920, height: 560 }, "#ffffff", { cornerRadius: 48, shadow: { offsetX: 0, offsetY: 18, blur: 44, color: "rgba(146, 64, 14, 0.2)" } }),
+      text("내용", "핵심 팁을 한두 문장으로\n쉽게 풀어서 적어 주세요.", { x: 140, y: 680, width: 800, height: 380 }, { fontSize: 62, color: "#451a03", align: "left", lineHeight: 1.45, bold: false }),
+    ], preset("골드")),
+  ];
+}
+
 function createSlideSets(): GalleryTemplate[] {
   return [
-    makeSlideSet("set-news-5", "캐러셀 5장 세트 · 다크", { bg: "#101828", ink: "#ffffff", sub: "#98a2b3", accent: "#8b5cf6" }, 3, "오늘의 이슈"),
-    makeSlideSet("set-tips-6", "캐러셀 6장 세트 · 라이트", { bg: "#f7f3ea", ink: "#24211d", sub: "#8a8478", accent: "#e8590c" }, 4, "꿀팁 모음"),
+    makeSlideSet("set-news-5", "캐러셀 5장 세트 · 다크", { bg: "#101828", ink: "#ffffff", sub: "#a5b4fc", accent: "#a78bfa", gradient: preset("미드나잇") }, 3, "오늘의 이슈"),
+    makeSlideSet("set-tips-6", "캐러셀 6장 세트 · 라이트", { bg: "#f7f3ea", ink: "#24211d", sub: "#8a8478", accent: "#e8590c", gradient: { from: "#fff7ed", to: "#fde68a", angle: 150 } }, 4, "꿀팁 모음"),
   ];
 }
 
 /** 갤러리 템플릿은 코드에서 매번 새 id로 만들어 적용 시 원본이 오염되지 않게 한다. */
 export function createGalleryTemplates(): GalleryTemplate[] {
-  return [...createSlideSets(), ...createSingleTemplates()];
+  return [...createSlideSets(), ...createDesignTemplates(), ...createSingleTemplates()];
 }
 
 function createSingleTemplates(): GalleryTemplate[] {

@@ -1,7 +1,8 @@
 import { BLEND_MODES } from "../../types/canvas";
 import { useState } from "react";
-import type { BlendMode, ImageFilters, ImageLayer, Layer, ShapeLayer, TextLayer } from "../../types/canvas";
+import type { BlendMode, GradientFill, ImageFilters, ImageLayer, Layer, ShapeLayer, TextLayer } from "../../types/canvas";
 import { TextStylePanel } from "./TextStylePanel";
+import { GradientEditor, ShadowFields } from "./DesignControls";
 
 export type AlignMode = "left" | "hcenter" | "right" | "top" | "vcenter" | "bottom";
 
@@ -28,6 +29,10 @@ interface Props {
   canvasSize: { width: number; height: number };
   isCropMode: boolean;
   onToggleCropMode: () => void;
+  background: { color: string; gradient?: GradientFill };
+  slideCount: number;
+  onBackgroundChange: (background: { color: string; gradient?: GradientFill }, coalesceKey?: string) => void;
+  onApplyBackgroundToAll: () => void;
   onCompareOriginal: (active: boolean) => void;
   onAlign: (mode: AlignMode) => void;
   layer: Layer | null;
@@ -113,13 +118,42 @@ function ShapeSection({ layer, onChange }: { layer: ShapeLayer; onChange: Props[
   return (
     <section className="panel-section" aria-label="도형 스타일">
       <h3>도형</h3>
+      <GradientEditor label="채우기" color={layer.fillColor} gradient={layer.fillGradient} showPresets
+        onColorChange={(color) => onChange({ fillColor: color }, "shape-fill")}
+        onGradientChange={(gradient) => onChange({ fillGradient: gradient })} />
       <div className="panel-fields">
-        <label><span>채우기</span><div className="color-field"><input type="color" value={layer.fillColor} onChange={(e) => onChange({ fillColor: e.target.value }, "shape-fill")} /><input value={layer.fillColor} onChange={(e) => onChange({ fillColor: e.target.value }, "shape-fill")} aria-label="채우기 색상 코드" /></div></label>
         <label><span>테두리</span><div className="color-field"><input type="color" value={layer.strokeColor ?? "#000000"} onChange={(e) => onChange({ strokeColor: e.target.value }, "shape-stroke")} /><input type="range" min="0" max="40" value={layer.strokeWidth ?? 0} onChange={(e) => onChange({ strokeWidth: Number(e.target.value) }, "shape-stroke-w")} aria-label="테두리 두께" /><output>{layer.strokeWidth ?? 0}</output></div></label>
         {layer.shapeType === "rectangle" && (
           <label><span>모서리 둥글기 <output>{layer.cornerRadius ?? 0}</output></span><input type="range" min="0" max="300" value={layer.cornerRadius ?? 0} onChange={(e) => onChange({ cornerRadius: Number(e.target.value) }, "shape-radius")} /></label>
         )}
       </div>
+    </section>
+  );
+}
+
+function ImageStyleSection({ layer, onChange }: { layer: ImageLayer; onChange: Props["onChange"] }) {
+  return (
+    <section className="panel-section" aria-label="이미지 모양">
+      <h3>모양</h3>
+      <div className="panel-fields">
+        <label><span>모서리 둥글기 <output>{layer.cornerRadius ?? 0}</output></span>
+          <input type="range" min="0" max="500" value={layer.cornerRadius ?? 0} onChange={(e) => onChange({ cornerRadius: Number(e.target.value) }, "image-radius")} /></label>
+        <label><span>테두리</span>
+          <div className="color-field"><input type="color" value={layer.borderColor ?? "#ffffff"} onChange={(e) => onChange({ borderColor: e.target.value }, "image-border")} />
+            <input type="range" min="0" max="60" value={layer.borderWidth ?? 0} onChange={(e) => onChange({ borderWidth: Number(e.target.value) }, "image-border-w")} aria-label="테두리 두께" /><output>{layer.borderWidth ?? 0}</output></div></label>
+      </div>
+    </section>
+  );
+}
+
+function BackgroundSection({ background, slideCount, onBackgroundChange, onApplyBackgroundToAll }: Pick<Props, "background" | "slideCount" | "onBackgroundChange" | "onApplyBackgroundToAll">) {
+  return (
+    <section className="panel-section" aria-label="캔버스 배경">
+      <h3>캔버스 배경</h3>
+      <GradientEditor label="배경" color={background.color} gradient={background.gradient} showPresets
+        onColorChange={(color) => onBackgroundChange({ color, gradient: undefined }, "bg-color")}
+        onGradientChange={(gradient) => onBackgroundChange({ color: background.color, gradient })} />
+      {slideCount > 1 && <button type="button" className="btn" onClick={onApplyBackgroundToAll}>이 배경을 모든 슬라이드({slideCount}장)에 적용</button>}
     </section>
   );
 }
@@ -184,12 +218,13 @@ function ImageAdjustSection({ layer, onChange, onCompareOriginal }: { layer: Ima
   );
 }
 
-export function PropertiesPanel({ layer, canvasSize, isCropMode, onToggleCropMode, onCompareOriginal, onAlign, onChange, onDuplicate, onDelete }: Props) {
+export function PropertiesPanel({ layer, canvasSize, isCropMode, onToggleCropMode, background, slideCount, onBackgroundChange, onApplyBackgroundToAll, onCompareOriginal, onAlign, onChange, onDuplicate, onDelete }: Props) {
   if (!layer) {
     return (
       <aside className="properties-panel" aria-label="속성">
         <h2>속성</h2>
-        <p className="panel-placeholder">캔버스에서 레이어를 선택하면 속성이 나타납니다.<br />단축키: Ctrl+Z 실행 취소 · Ctrl+Shift+Z 다시 실행 · Ctrl+D 복제 · Delete 삭제 · 방향키 이동</p>
+        <BackgroundSection background={background} slideCount={slideCount} onBackgroundChange={onBackgroundChange} onApplyBackgroundToAll={onApplyBackgroundToAll} />
+        <p className="panel-placeholder">캔버스에서 레이어를 선택하면 해당 속성이 나타납니다. 단축키는 <kbd>?</kbd>, 모든 기능은 <kbd>Ctrl</kbd>+<kbd>K</kbd>.</p>
       </aside>
     );
   }
@@ -209,10 +244,12 @@ export function PropertiesPanel({ layer, canvasSize, isCropMode, onToggleCropMod
       )}
       {layer.type === "image" && <ImageCropSection layer={layer} canvasSize={canvasSize} isCropMode={isCropMode} onToggleCropMode={onToggleCropMode} onChange={onChange} />}
       {layer.type === "shape" && <ShapeSection layer={layer} onChange={onChange} />}
+      {layer.type === "image" && <ImageStyleSection layer={layer} onChange={onChange} />}
       {layer.type === "image" && <ImageAdjustSection key={layer.id} layer={layer} onChange={onChange} onCompareOriginal={onCompareOriginal} />}
 
       <section className="panel-section" aria-label="공통 속성">
         <h3>공통</h3>
+        {layer.type !== "text" && <ShadowFields shadow={layer.shadow} onChange={(shadow) => onChange({ shadow })} />}
         <div className="align-row" role="group" aria-label="캔버스 기준 정렬">
           {ALIGN_BUTTONS.map((button) => (
             <button key={button.mode} type="button" title={`캔버스 ${button.label}에 맞춤`} aria-label={`캔버스 ${button.label}에 맞춤`} onClick={() => onAlign(button.mode)}>{button.icon}</button>

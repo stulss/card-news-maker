@@ -74,7 +74,7 @@ export async function loadSavedDeck(): Promise<Deck | null> {
       version: 1,
       templates: saved.slides.map((slide, index): SavedTemplate => ({
         id: String(slide.id ?? index), name: `slide-${index}`, createdAt: now, updatedAt: now,
-        canvas: { width: slide.width, height: slide.height, backgroundColor: slide.backgroundColor, layers: slide.layers },
+        canvas: { width: slide.width, height: slide.height, backgroundColor: slide.backgroundColor, backgroundGradient: slide.backgroundGradient, layers: slide.layers },
       })),
     });
     const validated = parseTemplateBundle(bundle);

@@ -84,6 +84,14 @@ export function ImageLayerNode({ layer, cropMode = false, ignoreFilters = false,
       rotation={layer.rotation}
       visible={layer.visible}
       opacity={layer.opacity ?? 1}
+      cornerRadius={layer.cornerRadius ?? 0}
+      stroke={layer.borderWidth ? layer.borderColor ?? "#ffffff" : undefined}
+      strokeWidth={layer.borderWidth ?? 0}
+      shadowEnabled={!!layer.shadow}
+      shadowColor={layer.shadow?.color}
+      shadowBlur={layer.shadow?.blur ?? 0}
+      shadowOffsetX={layer.shadow?.offsetX ?? 0}
+      shadowOffsetY={layer.shadow?.offsetY ?? 0}
       filters={filters}
       brightness={ignoreFilters ? 0 : layer.filters?.brightness ?? 0}
       contrast={ignoreFilters ? 0 : layer.filters?.contrast ?? 0}

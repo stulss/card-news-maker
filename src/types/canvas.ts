@@ -1,11 +1,19 @@
 // PRD.md 21장 "데이터 구조" 그대로 이식.
 // 인터페이스를 고칠 때는 PRD.md 21장도 같이 갱신할 것 (CLAUDE.md 4번 원칙).
 
+/** 선형 그라디언트. 각도는 CSS와 같다(0°=아래→위, 90°=왼쪽→오른쪽). */
+export interface GradientFill {
+  from: string;
+  to: string;
+  angle: number;
+}
+
 export interface CanvasProject {
   id: string;
   width: number;
   height: number;
   backgroundColor: string;
+  backgroundGradient?: GradientFill; // 있으면 단색 대신 그라디언트 배경
   layers: Layer[];
   createdAt: string;
   updatedAt: string;
@@ -29,6 +37,7 @@ export interface BaseLayer {
   visible: boolean;
   locked: boolean;
   name: string;
+  shadow?: ShadowStyle; // 모든 레이어 공통 그림자(텍스트·도형·이미지)
   blendMode?: BlendMode; // 없으면 일반(normal)
   groupId?: string; // 같은 값이면 한 그룹: 캔버스 이동·표시·잠금을 함께 적용한다(멤버 2개 미만이면 자동 해제)
   opacity?: number; // 0~1, 기본 1(불투명). 워터마크 등 반투명 레이어에 쓴다.
@@ -51,6 +60,9 @@ export interface ImageLayer extends BaseLayer {
   type: "image";
   src: string;
   filters?: ImageFilters;
+  cornerRadius?: number; // 모서리 둥글기(px)
+  borderColor?: string;
+  borderWidth?: number;
   cropZoom?: number; // 1~5, 자르기 확대 배율(1=박스를 꽉 채우는 cover)
   focusX?: number; // 0~1, 확대된 이미지에서 보여줄 가로 위치(0.5=중앙)
   focusY?: number; // 0~1, 세로 위치
@@ -85,8 +97,9 @@ export interface StickerLayer extends BaseLayer {
 
 export interface ShapeLayer extends BaseLayer {
   type: "shape";
-  shapeType: "rectangle" | "circle" | "star" | "triangle" | "speechBubble";
+  shapeType: "rectangle" | "circle" | "star" | "triangle" | "heart" | "bubble" | "arrow" | "bolt" | "bookmark" | "speechBubble";
   fillColor: string;
+  fillGradient?: GradientFill; // 있으면 fillColor 대신 사용
   strokeColor?: string;
   strokeWidth?: number;
   cornerRadius?: number;

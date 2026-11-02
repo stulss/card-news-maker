@@ -91,7 +91,7 @@ export function LayerPanel({
                 >⋮⋮</span>
 
                 <div className="layer-icon">
-                  {isChecked ? "✓" : layer.type === "text" ? "T" : "IMG"}
+                  {isChecked ? "✓" : layer.type === "text" ? "T" : layer.type === "shape" ? "◆" : "IMG"}
                 </div>
 
                 <div className="layer-info">

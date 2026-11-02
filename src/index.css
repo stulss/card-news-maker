@@ -12,6 +12,8 @@
   --color-text-dim: oklch(0.58 0.014 275);
   --color-accent: oklch(0.68 0.19 285);
   --color-accent-soft: oklch(0.82 0.11 285);
+  --color-grid: oklch(0.30 0.01 275);
+  --shadow-pop: 0 24px 80px oklch(0 0 0 / 0.6);
   --gradient-accent: linear-gradient(135deg, oklch(0.62 0.21 285), oklch(0.66 0.22 340));
   --font-sans: "IBM Plex Sans KR", "Malgun Gothic", system-ui, sans-serif;
 
@@ -43,3 +45,26 @@ body {
   width: 100%;
   height: 100vh;
 }
+
+/* 라이트 테마 — App이 <html data-theme="light">를 지정한다 */
+:root[data-theme="light"] {
+  --color-bg: oklch(0.975 0.004 275);
+  --color-bg-panel: oklch(1 0 0);
+  --color-bg-input: oklch(0.962 0.006 275);
+  --color-bg-canvas-area: oklch(0.935 0.009 275);
+  --color-hover: oklch(0.935 0.012 275);
+  --color-border: oklch(0.885 0.012 275);
+  --color-text: oklch(0.22 0.02 275);
+  --color-text-muted: oklch(0.44 0.02 275);
+  --color-text-dim: oklch(0.58 0.018 275);
+  --color-accent-soft: oklch(0.46 0.18 285);
+  --color-grid: oklch(0.84 0.012 275);
+  --shadow-pop: 0 24px 80px oklch(0.3 0.04 275 / 0.25);
+  color-scheme: light;
+}
+
+* { scrollbar-width: thin; scrollbar-color: var(--color-border) transparent; }
+::selection { background: oklch(0.68 0.19 285 / 0.35); }
+:focus-visible { outline: 2px solid var(--color-accent-soft); outline-offset: 2px; }
+button, input, select, textarea { transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease; }
+body { transition: background-color 0.2s ease, color 0.2s ease; }

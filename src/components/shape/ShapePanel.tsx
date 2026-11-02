@@ -1,28 +1,23 @@
 import { useState } from "react";
+import { PATH_SHAPES, isPathShape } from "../../features/design/shapes";
+import { SHAPE_OPTIONS } from "../../features/design/shapeOptions";
+import type { ShapeKind } from "../../features/design/shapeOptions";
 
-export type ShapeKind = "rectangle" | "rounded" | "circle" | "star" | "triangle" | "line";
+export type { ShapeKind };
 
 interface Props {
-  onAddShape: (kind: ShapeKind, fillColor: string) => void;
+  onAddShape: (kind: ShapeKind, fillColor: string, gradient: boolean) => void;
 }
-
-const SHAPES: Array<{ kind: ShapeKind; label: string; icon: string }> = [
-  { kind: "rectangle", label: "사각형", icon: "■" },
-  { kind: "rounded", label: "둥근 사각형", icon: "▢" },
-  { kind: "circle", label: "원", icon: "●" },
-  { kind: "star", label: "별", icon: "★" },
-  { kind: "triangle", label: "삼각형", icon: "▲" },
-  { kind: "line", label: "구분선", icon: "━" },
-];
 
 const SWATCHES = ["#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#38bdf8", "#ffffff", "#111827"];
 
 export function ShapePanel({ onAddShape }: Props) {
   const [color, setColor] = useState(SWATCHES[0]);
+  const [gradient, setGradient] = useState(false);
   return (
     <aside className="side-panel" aria-label="도형">
       <h2>도형</h2>
-      <p className="panel-hint">색을 고른 뒤 도형을 누르면 캔버스 가운데에 추가됩니다. 색·테두리·모서리는 속성 패널에서 바꿀 수 있어요.</p>
+      <p className="panel-hint">색을 고른 뒤 도형을 누르면 캔버스 가운데에 추가됩니다. 색·그라디언트·테두리·그림자는 속성 패널에서 바꿀 수 있어요.</p>
       <div className="color-field">
         <input type="color" value={color} onChange={(event) => setColor(event.target.value)} aria-label="도형 색상" />
         <div className="swatch-row">
@@ -31,10 +26,13 @@ export function ShapePanel({ onAddShape }: Props) {
           ))}
         </div>
       </div>
+      <label className="toggle-row"><input type="checkbox" checked={gradient} onChange={(event) => setGradient(event.target.checked)} /><span>그라디언트로 추가</span></label>
       <div className="shape-grid">
-        {SHAPES.map((shape) => (
-          <button key={shape.kind} type="button" className="preset-card shape-card" onClick={() => onAddShape(shape.kind, color)}>
-            <span className="shape-icon" aria-hidden="true" style={{ color }}>{shape.icon}</span>
+        {SHAPE_OPTIONS.map((shape) => (
+          <button key={shape.kind} type="button" className="preset-card shape-card" onClick={() => onAddShape(shape.kind, color, gradient)}>
+            {isPathShape(shape.kind)
+              ? <svg className="shape-icon" viewBox="0 0 100 100" aria-hidden="true"><path d={PATH_SHAPES[shape.kind]} fill={color} /></svg>
+              : <span className="shape-icon" aria-hidden="true" style={{ color }}>{shape.icon}</span>}
             <strong>{shape.label}</strong>
           </button>
         ))}

@@ -14,7 +14,10 @@ import type { Command } from "./components/command/CommandPalette";
 import type { RulerGuide } from "./components/canvas/Rulers";
 import { loadExportSettings, renderExport, saveExportSettings } from "./features/export/exportImage";
 import type { ExportSettings } from "./features/export/exportImage";
-import type { ShapeKind } from "./components/shape/ShapePanel";
+import { SHAPE_OPTIONS } from "./features/design/shapeOptions";
+import type { ShapeKind } from "./features/design/shapeOptions";
+import { TextPanel } from "./components/text/TextPanel";
+import { TEXT_PRESETS } from "./features/design/textPresets";
 import type { AlignMode } from "./components/editor/PropertiesPanel";
 import type { GalleryTemplate } from "./features/template/galleryTemplates";
 import { useProjectHistory } from "./features/history/useProjectHistory";
@@ -31,7 +34,7 @@ import { createEmptyProject } from "./utils/createProject";
 import { textColorDefaultsFor } from "./utils/textDefaults";
 import { loadImageFile, ImageUploadError } from "./features/image/loadImageFile";
 import { createExportFileName, downloadDataUrl } from "./features/export/downloadCanvas";
-import type { ImageLayer, Layer, TextLayer } from "./types/canvas";
+import type { GradientFill, ImageLayer, Layer, TextLayer } from "./types/canvas";
 import {
   createDefaultTemplates,
   createTemplate,
@@ -68,7 +71,7 @@ function App() {
   const { deck, project, setProject, setDeck, setActive, replaceDeck, undo, redo, canUndo, canRedo } = useProjectHistory(() => createDeck(1080, 1350));
   const [initialTemplates] = useState(initializeTemplates);
   const [templates, setTemplates] = useState(initialTemplates.templates);
-  const [sidebarTab, setSidebarTab] = useState<"layers" | "templates" | "meme" | "gallery" | "shapes">("gallery");
+  const [sidebarTab, setSidebarTab] = useState<"layers" | "templates" | "meme" | "gallery" | "shapes" | "text">("gallery");
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isStyleSheetOpen, setIsStyleSheetOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(initialTemplates.error);
@@ -85,6 +88,7 @@ function App() {
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [exportSettings, setExportSettings] = useState<ExportSettings>(loadExportSettings);
   const [rulersVisible, setRulersVisible] = useState(false);
+  const [theme, setTheme] = useState<"dark" | "light">(() => { try { return localStorage.getItem("card-news-theme") === "light" ? "light" : "dark"; } catch { return "dark"; } });
   const [rulerGuides, setRulerGuides] = useState<RulerGuide[]>([]);
   const [userStickers, setUserStickers] = useState<UserSticker[]>(loadStickers);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -218,7 +222,26 @@ function App() {
     setIsMobileSidebarOpen(false);
   }
 
-  function handleAddShape(kind: ShapeKind, fillColor: string) {
+  function handleAddTextPreset(presetId: string) {
+    const preset = TEXT_PRESETS.find((candidate) => candidate.id === presetId);
+    if (!preset) return;
+    addLayers(preset.build(project));
+    setIsMobileSidebarOpen(false);
+  }
+
+  function handleBackgroundChange(next: { color: string; gradient?: GradientFill }, coalesceKey?: string) {
+    setProject((p) => ({ ...p, backgroundColor: next.color, backgroundGradient: next.gradient, updatedAt: new Date().toISOString() }), coalesceKey);
+  }
+
+  function handleApplyBackgroundToAll() {
+    setDeck((current) => {
+      const source = current.slides[current.active];
+      return { ...current, slides: current.slides.map((slide) => ({ ...slide, backgroundColor: source.backgroundColor, backgroundGradient: source.backgroundGradient })) };
+    });
+    setStatusMessage("이 배경을 모든 슬라이드에 적용했습니다.");
+  }
+
+  function handleAddShape(kind: ShapeKind, fillColor: string, gradient = false) {
     const base = Math.round(project.width * 0.33);
     const sizes: Record<ShapeKind, { width: number; height: number }> = {
       rectangle: { width: Math.round(project.width * 0.45), height: Math.round(project.width * 0.28) },
@@ -227,14 +250,21 @@ function App() {
       star: { width: base, height: base },
       triangle: { width: base, height: base },
       line: { width: Math.round(project.width * 0.55), height: Math.max(8, Math.round(project.width * 0.01)) },
+      heart: { width: base, height: Math.round(base * 0.92) },
+      bubble: { width: Math.round(base * 1.25), height: Math.round(base * 1.0) },
+      arrow: { width: Math.round(base * 1.3), height: Math.round(base * 0.8) },
+      bolt: { width: Math.round(base * 0.7), height: Math.round(base * 1.0) },
+      bookmark: { width: Math.round(base * 0.6), height: Math.round(base * 1.0) },
     };
     const { width, height } = sizes[kind];
-    const labels: Record<ShapeKind, string> = { rectangle: "사각형", rounded: "둥근 사각형", circle: "원", star: "별", triangle: "삼각형", line: "구분선" };
+    const label = SHAPE_OPTIONS.find((option) => option.kind === kind)?.label ?? "도형";
+    const companion = fillColor.toLowerCase() === "#ec4899" ? "#8b5cf6" : "#ec4899";
     addLayers([{
-      id: crypto.randomUUID(), type: "shape", name: labels[kind],
+      id: crypto.randomUUID(), type: "shape", name: label,
       shapeType: kind === "rounded" || kind === "line" ? "rectangle" : kind,
       x: (project.width - width) / 2, y: (project.height - height) / 2, width, height,
       rotation: 0, zIndex: 0, visible: true, locked: false, fillColor,
+      fillGradient: gradient ? { from: fillColor, to: companion, angle: 135 } : undefined,
       cornerRadius: kind === "rounded" ? Math.round(height * 0.2) : undefined,
     }]);
     setIsMobileSidebarOpen(false);
@@ -310,7 +340,7 @@ function App() {
       setDeck((current) => withCanvasSize({
         ...current,
         slides: current.slides.map((slide, index) => index === current.active
-          ? { ...slide, backgroundColor: template.canvas.backgroundColor, layers: freshLayers(template.canvas.layers), updatedAt: now } : slide),
+          ? { ...slide, backgroundColor: template.canvas.backgroundColor, backgroundGradient: template.canvas.backgroundGradient, layers: freshLayers(template.canvas.layers), updatedAt: now } : slide),
       }, template.canvas.width, template.canvas.height));
     }
     setSelectedLayerId(null);
@@ -664,6 +694,11 @@ function App() {
   }, [deck, autosaveReady]);
 
   useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try { localStorage.setItem("card-news-theme", theme); } catch { /* 저장 공간 없음: 무시 */ }
+  }, [theme]);
+
+  useEffect(() => {
     try { localStorage.setItem("card-news-caption", caption); } catch { /* 저장 공간 없음: 무시 */ }
   }, [caption]);
 
@@ -678,10 +713,14 @@ function App() {
       { id: "redo", group: "편집", label: "다시 실행", shortcut: "Ctrl+Shift+Z", keywords: "redo", run: redo },
       { id: "add-image", group: "추가", label: "이미지 추가", keywords: "사진 업로드 image", run: () => fileInputRef.current?.click() },
       { id: "add-text", group: "추가", label: "텍스트 추가", keywords: "글자 문구 text", run: handleAddText },
-      ...(["rectangle", "rounded", "circle", "star", "triangle", "line"] as const).map((kind): Command => ({
-        id: `shape-${kind}`, group: "도형", label: `${{ rectangle: "사각형", rounded: "둥근 사각형", circle: "원", star: "별", triangle: "삼각형", line: "구분선" }[kind]} 추가`,
-        keywords: "shape 도형", run: () => handleAddShape(kind, "#8b5cf6"),
+      ...SHAPE_OPTIONS.map((option): Command => ({
+        id: `shape-${option.kind}`, group: "도형", label: `${option.label} 추가`, keywords: "shape 도형",
+        run: () => handleAddShape(option.kind, "#8b5cf6", false),
       })),
+      ...TEXT_PRESETS.map((preset): Command => ({
+        id: `text-${preset.id}`, group: "텍스트", label: `텍스트 스타일: ${preset.label}`, keywords: "text 글자 타이포", run: () => handleAddTextPreset(preset.id),
+      })),
+      { id: "theme", group: "보기", label: theme === "dark" ? "라이트 테마로 전환" : "다크 테마로 전환", keywords: "theme dark light 밝은 어두운", run: () => setTheme((t) => (t === "dark" ? "light" : "dark")) },
       ...["classic", "center", "subtitle", "bubble", "breaking"].map((presetId): Command => ({
         id: `meme-${presetId}`, group: "밈", label: `밈 자막: ${{ classic: "클래식 상·하단", center: "중앙 한 줄", subtitle: "영화 자막", bubble: "말풍선 대사", breaking: "속보 뉴스" }[presetId]}`,
         keywords: "meme 자막", run: () => handleApplyMemePreset(presetId),
@@ -732,13 +771,14 @@ function App() {
     }
   }
 
-  function openTab(tab: "layers" | "templates" | "meme" | "gallery" | "shapes") {
+  function openTab(tab: "layers" | "templates" | "meme" | "gallery" | "shapes" | "text") {
     setIsStyleSheetOpen(false);
     setIsMobileSidebarOpen(sidebarTab === tab ? !isMobileSidebarOpen : true);
     setSidebarTab(tab);
   }
 
   const railTabs = [
+    { id: "text", icon: "T", label: "텍스트" },
     { id: "gallery", icon: "▦", label: "갤러리" },
     { id: "shapes", icon: "◆", label: "도형" },
     { id: "meme", icon: "😂", label: "밈" },
@@ -771,12 +811,13 @@ function App() {
           </div>
           <label className="bg-picker" title="배경색">
             <input type="color" value={/^#[0-9a-f]{6}$/i.test(project.backgroundColor) ? project.backgroundColor : "#ffffff"}
-              onChange={(event) => setProject((p) => ({ ...p, backgroundColor: event.target.value, updatedAt: new Date().toISOString() }), "background")} />
+              onChange={(event) => setProject((p) => ({ ...p, backgroundColor: event.target.value, backgroundGradient: undefined, updatedAt: new Date().toISOString() }), "background")} />
             <span>배경</span>
           </label>
         </div>
 
         <div className="topbar-group">
+          <button type="button" className="btn icon-only" onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))} title="테마 전환 (다크/라이트)" aria-label="테마 전환">{theme === "dark" ? "☀" : "☾"}</button>
           <button type="button" className={`btn ig-toggle ${igGuide ? "active" : ""}`} aria-pressed={igGuide} onClick={() => setIgGuide((on) => !on)} title="인스타그램 안전영역 가이드 (스토리 UI 영역·프로필 그리드 잘림)">IG</button>
           <button type="button" className={`btn icon-only ${rulersVisible ? "active" : ""}`} aria-pressed={rulersVisible} onClick={() => setRulersVisible((v) => !v)} title="눈금자 (Shift+R)" aria-label="눈금자 켜기/끄기">📏</button>
           <button type="button" className="btn icon-only" onClick={() => setIsPaletteOpen(true)} title="명령 팔레트 (Ctrl+K)" aria-label="명령 팔레트">⌕</button>
@@ -795,7 +836,6 @@ function App() {
       <main className="workspace">
         <nav className="tool-rail" aria-label="편집 도구">
           <button type="button" onClick={() => fileInputRef.current?.click()}><span aria-hidden="true">▧</span><span>이미지</span></button>
-          <button type="button" onClick={handleAddText}><span aria-hidden="true">T</span><span>텍스트</span></button>
           {railTabs.map((tab) => (
             <button key={tab.id} type="button" className={sidebarTab === tab.id ? "active" : ""} aria-pressed={sidebarTab === tab.id} onClick={() => openTab(tab.id)}>
               <span aria-hidden="true">{tab.icon}</span><span>{tab.label}</span>
@@ -807,6 +847,7 @@ function App() {
 
         <button type="button" className={`drawer-backdrop ${isMobileSidebarOpen ? "visible" : ""}`} aria-label="패널 닫기" onClick={() => setIsMobileSidebarOpen(false)} />
         <div className={`side-drawer ${isMobileSidebarOpen ? "mobile-open" : ""}`}>
+          {sidebarTab === "text" && <TextPanel onAdd={handleAddTextPreset} onAddPlain={handleAddText} />}
           {sidebarTab === "shapes" && <ShapePanel onAddShape={handleAddShape} />}
           {sidebarTab === "gallery" && <GalleryPanel onApply={handleApplyGalleryTemplate} />}
           {sidebarTab === "meme" && <MemePanel onApplyPreset={handleApplyMemePreset} onAddSticker={handleAddSticker} userStickers={userStickers} onUploadSticker={handleUploadSticker} onAddUserSticker={handleAddUserSticker} onDeleteUserSticker={handleDeleteUserSticker} />}
@@ -855,7 +896,7 @@ function App() {
             <span className="sheet-summary">{selectedLayer ? `속성 · ${selectedLayer.name}` : "레이어를 선택하세요"}</span>
             <span aria-hidden="true">{isStyleSheetOpen ? "⌄" : "⌃"}</span>
           </button>
-          <PropertiesPanel layer={selectedLayer} isCropMode={!!cropLayerId} onToggleCropMode={() => setCropTargetId(cropLayerId ? null : selectedLayer?.id ?? null)} onCompareOriginal={setIsComparingOriginal} onAlign={handleAlign} canvasSize={{ width: project.width, height: project.height }} onChange={(changes, key) => { if (selectedLayer) updateLayer(selectedLayer.id, changes, key); }}
+          <PropertiesPanel layer={selectedLayer} background={{ color: project.backgroundColor, gradient: project.backgroundGradient }} slideCount={deck.slides.length} onBackgroundChange={handleBackgroundChange} onApplyBackgroundToAll={handleApplyBackgroundToAll} isCropMode={!!cropLayerId} onToggleCropMode={() => setCropTargetId(cropLayerId ? null : selectedLayer?.id ?? null)} onCompareOriginal={setIsComparingOriginal} onAlign={handleAlign} canvasSize={{ width: project.width, height: project.height }} onChange={(changes, key) => { if (selectedLayer) updateLayer(selectedLayer.id, changes, key); }}
             onDuplicate={handleDuplicateLayer} onDelete={() => { if (selectedLayer) handleDeleteLayer(selectedLayer.id); }} />
         </div>
       </main>

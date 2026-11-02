@@ -9,7 +9,7 @@ export interface SavedTemplate {
   name: string;
   createdAt: string;
   updatedAt: string;
-  canvas: Pick<CanvasProject, "width" | "height" | "backgroundColor" | "layers">;
+  canvas: Pick<CanvasProject, "width" | "height" | "backgroundColor" | "backgroundGradient" | "layers">;
 }
 
 interface TemplateBundle {
@@ -60,7 +60,8 @@ function hasBaseLayerFields(layer: Record<string, unknown>) {
     ["x", "y", "width", "height", "rotation", "zIndex"].every((key) => typeof layer[key] === "number" && Number.isFinite(layer[key])) &&
     typeof layer.visible === "boolean" && typeof layer.locked === "boolean" &&
     hasValidOptionalOpacity(layer) && (layer.groupId === undefined || typeof layer.groupId === "string") &&
-    (layer.blendMode === undefined || (BLEND_MODES as readonly unknown[]).includes(layer.blendMode));
+    (layer.blendMode === undefined || (BLEND_MODES as readonly unknown[]).includes(layer.blendMode)) &&
+    hasValidOptionalShadow(layer.shadow);
 }
 
 // 필터 값은 선택 필드. 있으면 허용 범위의 유한수/불리언만 통과시킨다(비정상 값이 Konva 필터에 들어가지 않게).
@@ -79,6 +80,18 @@ function hasValidOptionalCrop(layer: Record<string, unknown>) {
   return inRange("cropZoom", 1, 5) && inRange("focusX", 0, 1) && inRange("focusY", 0, 1);
 }
 
+function hasValidOptionalGradient(gradient: unknown) {
+  if (gradient === undefined) return true;
+  return isRecord(gradient) && typeof gradient.from === "string" && typeof gradient.to === "string" &&
+    typeof gradient.angle === "number" && Number.isFinite(gradient.angle);
+}
+
+function hasValidOptionalNumber(value: unknown, min: number, max: number) {
+  return value === undefined || (typeof value === "number" && Number.isFinite(value) && value >= min && value <= max);
+}
+
+const SHAPE_TYPES = ["rectangle", "circle", "star", "triangle", "heart", "bubble", "arrow", "bolt", "bookmark", "speechBubble"];
+
 function hasValidOptionalShadow(shadow: unknown) {
   if (shadow === undefined) return true;
   if (!isRecord(shadow)) return false;
@@ -92,7 +105,9 @@ function isSafeImageSource(value: unknown) {
 
 function isValidLayer(value: unknown): value is Layer {
   if (!isRecord(value) || !hasBaseLayerFields(value) || typeof value.type !== "string") return false;
-  if (value.type === "image") return isSafeImageSource(value.src) && hasValidOptionalFilters(value.filters) && hasValidOptionalCrop(value);
+  if (value.type === "image") return isSafeImageSource(value.src) && hasValidOptionalFilters(value.filters) && hasValidOptionalCrop(value) &&
+      hasValidOptionalNumber(value.cornerRadius, 0, 5000) && hasValidOptionalNumber(value.borderWidth, 0, 200) &&
+      (value.borderColor === undefined || typeof value.borderColor === "string");
   if (value.type === "text") {
     return typeof value.text === "string" && typeof value.fontFamily === "string" &&
       typeof value.fontSize === "number" && Number.isFinite(value.fontSize) && typeof value.color === "string" &&
@@ -103,7 +118,7 @@ function isValidLayer(value: unknown): value is Layer {
   }
   if (value.type === "sticker") return typeof value.assetId === "string" && isSafeImageSource(value.src);
   if (value.type === "shape") {
-    return (value.shapeType === "rectangle" || value.shapeType === "circle" || value.shapeType === "star" || value.shapeType === "triangle" || value.shapeType === "speechBubble") && typeof value.fillColor === "string";
+    return SHAPE_TYPES.includes(value.shapeType as string) && typeof value.fillColor === "string" && hasValidOptionalGradient(value.fillGradient);
   }
   return false;
 }
@@ -115,7 +130,7 @@ function isValidTemplate(value: unknown): value is SavedTemplate {
   return typeof canvas.width === "number" && Number.isFinite(canvas.width) && canvas.width > 0 &&
     canvas.width <= 10_000 && typeof canvas.height === "number" && Number.isFinite(canvas.height) && canvas.height > 0 &&
     canvas.height <= 10_000 && typeof canvas.backgroundColor === "string" && Array.isArray(canvas.layers) &&
-    canvas.layers.length <= 500 && canvas.layers.every(isValidLayer);
+    canvas.layers.length <= 500 && hasValidOptionalGradient(canvas.backgroundGradient) && canvas.layers.every(isValidLayer);
 }
 
 export function parseTemplateBundle(json: string): SavedTemplate[] {
@@ -157,7 +172,7 @@ export function createTemplate(name: string, project: CanvasProject): SavedTempl
   const trimmedName = name.trim();
   if (!trimmedName) throw new TemplateValidationError("템플릿 이름을 입력해 주세요.");
   const now = new Date().toISOString();
-  return { id: crypto.randomUUID(), name: trimmedName, createdAt: now, updatedAt: now, canvas: structuredClone({ width: project.width, height: project.height, backgroundColor: project.backgroundColor, layers: project.layers }) };
+  return { id: crypto.randomUUID(), name: trimmedName, createdAt: now, updatedAt: now, canvas: structuredClone({ width: project.width, height: project.height, backgroundColor: project.backgroundColor, backgroundGradient: project.backgroundGradient, layers: project.layers }) };
 }
 
 export function projectFromTemplate(template: SavedTemplate): CanvasProject {
