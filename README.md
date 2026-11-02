@@ -15,7 +15,8 @@
 | 파일 | 용도 |
 |---|---|
 | `작업내역_체크리스트.md` | **진행 상황·결정 기록·작업 로그.** AI 공용 인수인계 파일이자 단일 진실 공급원 |
-| `PRD.md` | 개발요청서 45장. 기능 요구사항·화면 설계·데이터 구조(43·44장 야구/백엔드는 폐기, 45장이 2차 기능) |
+| `docs/08_인스타그램_사용가이드.md` | 인스타 규격·작업 순서·업로드 방법·한계 |
+| `PRD.md` | 개발요청서 46장. 기능 요구사항·화면 설계·데이터 구조(43·44장 야구/백엔드는 폐기, 45장이 2차 기능) |
 | `CLAUDE.md` | AI가 폴더를 통째로 읽지 않도록 하는 토큰 절약 규칙 |
 | `AGENTS.md` / `GEMINI.md` | Codex·Antigravity 프로젝트 진입 지침 |
 | `docs/01_기획.md` | 구현된 아키텍처·기술 선택 요약 |
@@ -52,7 +53,7 @@
 
 ```text
 card-news-maker/
-├── PRD.md                       # 개발요청서 45장
+├── PRD.md                       # 개발요청서 46장
 ├── CLAUDE.md                    # AI 작업 규칙
 ├── AGENTS.md / GEMINI.md        # Codex / Antigravity 진입 지침
 ├── README.md
@@ -70,12 +71,16 @@ card-news-maker/
     ├── components/editor/       # PropertiesPanel(공통 투명도·이미지 보정), TextStylePanel
     ├── components/layer/        # LayerPanel
     ├── components/template/     # TemplatePanel(내 템플릿), GalleryPanel(갤러리)(내 템플릿), GalleryPanel(갤러리)
+    ├── components/slides/       # SlideStrip — 슬라이드 목록
+    ├── components/common/       # LayerThumb — 갤러리·슬라이드 공용 썸네일
     ├── components/shape/        # ShapePanel — 도형 추가
     ├── components/export/       # ExportDialog — 형식·품질·크기·워터마크
     ├── components/command/      # CommandPalette — Ctrl+K
     ├── components/help/         # ShortcutHelp — 단축키 도움말
     ├── components/meme/         # MemePanel — 자막 프리셋·이모지 스티커
-    ├── features/export/         # exportImage — 워터마크·형식 변환, downloadCanvas
+    ├── features/deck/           # Deck(슬라이드 묶음)·복제·크기 동기화
+    ├── features/autosave/       # deckStore — IndexedDB 자동 저장·복원
+    ├── features/export/         # exportImage(워터마크·페이지 번호), zip, downloadCanvas
     ├── features/image/          # loadImageFile — F-01 형식·용량 검증
     ├── features/export/         # downloadCanvas — PNG/JPG 내보내기
     ├── features/template/       # templateStore — CRUD·JSON 가져오기/내보내기
@@ -114,6 +119,10 @@ card-news-maker/
 | 눈금자·가이드 | Shift+R로 눈금자, 눈금자를 클릭하면 가이드선(스냅 대상, 내보내기에는 미포함) |
 | 명령 팔레트 | Ctrl+K — 기능 이름으로 검색해 실행 |
 | 단축키 도움말 | `?` 또는 Ctrl+/ |
+| 캐러셀(슬라이드) | 최대 10장, 캔버스 아래 슬라이드 목록(추가·복제·삭제·순서 변경), 5장·6장 세트 템플릿 |
+| 인스타 내보내기 | 전체 장 ZIP(`01.jpg…`), 페이지 번호, JPG 92·1080px 원클릭, 캡션·해시태그 카운터, 모바일 공유 |
+| 안전영역 가이드 | `IG` 버튼 — 스토리 UI 영역·프로필 그리드(3:4) 잘림 표시 |
+| 자동 저장 | 작업 전체(사진 포함)를 브라우저에 자동 저장·복원 |
 | 단축키 | Ctrl+D 복제, Delete 삭제, 방향키 1px(Shift 10px) 이동, Esc 선택 해제 |
 
 ## 범위 밖

@@ -1,33 +1,10 @@
 import { useMemo, useState } from "react";
 import { GALLERY_CATEGORIES, createGalleryTemplates } from "../../features/template/galleryTemplates";
+import { LayerThumb } from "../common/LayerThumb";
 import type { GalleryTemplate } from "../../features/template/galleryTemplates";
 
 interface Props {
   onApply: (template: GalleryTemplate) => void;
-}
-
-function Thumb({ template }: { template: GalleryTemplate }) {
-  const { width, height, backgroundColor, layers } = template.canvas;
-  return (
-    <div className="thumb" style={{ aspectRatio: `${width} / ${height}`, background: backgroundColor }}>
-      {layers.map((layer) => {
-        const box = { left: `${(layer.x / width) * 100}%`, top: `${(layer.y / height) * 100}%`, width: `${(layer.width / width) * 100}%`, height: `${(layer.height / height) * 100}%`, opacity: layer.opacity ?? 1 };
-        if (layer.type === "shape") {
-          const radius = layer.cornerRadius ? `${(layer.cornerRadius / width) * 100}cqw` : 0;
-          return <div key={layer.id} className="thumb-item" style={{ ...box, background: layer.fillColor, borderRadius: radius }} />;
-        }
-        if (layer.type === "text") {
-          const justify = layer.align === "left" ? "flex-start" : layer.align === "right" ? "flex-end" : "center";
-          return (
-            <div key={layer.id} className="thumb-item" style={{ ...box, justifyContent: justify, textAlign: layer.align, color: layer.color, fontWeight: layer.bold ? 700 : 400, fontFamily: layer.fontFamily, fontSize: `${(layer.fontSize / width) * 100}cqw` }}>
-              {layer.text}
-            </div>
-          );
-        }
-        return null;
-      })}
-    </div>
-  );
 }
 
 export function GalleryPanel({ onApply }: Props) {
@@ -47,7 +24,10 @@ export function GalleryPanel({ onApply }: Props) {
       <div className="gallery-grid">
         {visible.map((template) => (
           <button key={template.id} type="button" className="gallery-card" onClick={() => onApply(template)}>
-            <Thumb template={template} />
+            <div className="thumb-wrap">
+              <LayerThumb {...template.canvas} />
+              {template.slides && <span className="set-badge">{template.slides.length}장</span>}
+            </div>
             <span className="name">{template.name}</span>
           </button>
         ))}

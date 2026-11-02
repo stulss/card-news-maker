@@ -14,6 +14,7 @@ const SHORTCUT_GROUPS: Array<{ title: string; items: Array<{ keys: string; label
       { keys: "Delete / Backspace", label: "선택 레이어 삭제" },
       { keys: "방향키 (Shift = 10px)", label: "선택 레이어(그룹) 이동" },
       { keys: "Esc", label: "자르기 모드 종료 · 선택 해제" },
+      { keys: "PageUp / PageDown", label: "이전·다음 슬라이드" },
     ],
   },
   {

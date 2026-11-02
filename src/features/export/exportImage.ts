@@ -6,6 +6,7 @@ export interface ExportSettings {
   format: ExportFormat;
   quality: number; // 1~100, PNG에서는 무시
   scale: 0.5 | 1 | 2;
+  pageNumber: boolean; // 여러 장일 때 하단 가운데에 "1 / 5" 표시
   watermark: {
     enabled: boolean;
     text: string;
@@ -19,6 +20,7 @@ export const DEFAULT_EXPORT_SETTINGS: ExportSettings = {
   format: "png",
   quality: 90,
   scale: 1,
+  pageNumber: false,
   watermark: { enabled: false, text: "@my_account", position: "br", opacity: 70, size: 4 },
 };
 
@@ -40,6 +42,7 @@ export function loadExportSettings(): ExportSettings {
       format: FORMATS.includes(raw.format as ExportFormat) ? (raw.format as ExportFormat) : defaults.format,
       quality: clamp(raw.quality, 1, 100, defaults.quality),
       scale: raw.scale === 0.5 || raw.scale === 2 ? raw.scale : 1,
+      pageNumber: raw.pageNumber === true,
       watermark: {
         enabled: watermark.enabled === true,
         text: typeof watermark.text === "string" ? watermark.text.slice(0, 60) : defaults.watermark.text,
@@ -71,7 +74,7 @@ function loadImage(src: string) {
 }
 
 /** 캔버스가 만든 PNG(원본 품질)에 워터마크를 얹고 선택한 형식·품질로 다시 인코딩한다. */
-export async function renderExport(pngDataUrl: string, settings: ExportSettings): Promise<string> {
+export async function renderExport(pngDataUrl: string, settings: ExportSettings, page?: { index: number; total: number }): Promise<string> {
   const image = await loadImage(pngDataUrl);
   const canvas = document.createElement("canvas");
   canvas.width = image.naturalWidth;
@@ -98,6 +101,19 @@ export async function renderExport(pngDataUrl: string, settings: ExportSettings)
     const baseline = watermark.position === "tl" || watermark.position === "tr" ? margin + fontSize * 0.85
       : watermark.position === "center" ? canvas.height / 2 + fontSize * 0.35 : canvas.height - margin;
     context.fillText(watermark.text, left, baseline);
+    context.restore();
+  }
+
+  if (settings.pageNumber && page && page.total > 1) {
+    const fontSize = Math.max(10, Math.round(canvas.width * 0.028));
+    context.save();
+    context.font = `700 ${fontSize}px "IBM Plex Sans KR", "Malgun Gothic", sans-serif`;
+    context.globalAlpha = 0.75;
+    context.fillStyle = "#ffffff";
+    context.shadowColor = "rgba(0, 0, 0, 0.55)";
+    context.shadowBlur = fontSize * 0.25;
+    context.textAlign = "center";
+    context.fillText(`${page.index + 1} / ${page.total}`, canvas.width / 2, canvas.height - Math.round(fontSize * 1.1));
     context.restore();
   }
 

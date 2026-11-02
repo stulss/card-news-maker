@@ -8,6 +8,9 @@ import { ImageLayerNode } from "./ImageLayerNode";
 
 export interface CanvasStageHandle {
   toDataUrl: (format: "png" | "jpg", quality?: number, pixelRatio?: number) => string;
+  projectId: () => string;
+  /** 이미지가 모두 그려지고 글꼴이 준비됐는지(여러 슬라이드를 차례로 내보낼 때 기다리는 용도) */
+  isReady: () => boolean;
 }
 
 interface Props {
@@ -18,6 +21,7 @@ interface Props {
   onMoveLayers: (layerIds: string[], dx: number, dy: number) => void;
   cropLayerId?: string | null;
   originalViewLayerId?: string | null;
+  safeZone?: boolean;
   rulersVisible?: boolean;
   rulerGuides?: RulerGuide[];
   onAddGuide?: (axis: "x" | "y", position: number) => void;
@@ -41,7 +45,7 @@ function readNodeTransform(node: Konva.Node) {
 
 // 캔버스를 컨테이너 크기에 맞춰(fit) 표시한다 — PRD 14장.
 export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasStage(
-  { project, selectedLayerId, onSelectLayer, onChangeLayer, onMoveLayers, cropLayerId = null, originalViewLayerId = null, rulersVisible = false, rulerGuides = [], onAddGuide, onClearGuides }, ref,
+  { project, selectedLayerId, onSelectLayer, onChangeLayer, onMoveLayers, cropLayerId = null, originalViewLayerId = null, safeZone = false, rulersVisible = false, rulerGuides = [], onAddGuide, onClearGuides }, ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
@@ -52,6 +56,7 @@ export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasS
   const dragRef = useRef<{ node: Konva.Node; startX: number; startY: number; members: Array<{ node: Konva.Node; x: number; y: number }> } | null>(null);
   const areaRef = useRef<HTMLDivElement>(null);
   const guideGroupRef = useRef<Konva.Group>(null);
+  const safeGroupRef = useRef<Konva.Group>(null);
   const [origin, setOrigin] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [guides, setGuides] = useState<Array<{ axis: "x" | "y"; position: number }>>([]);
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -137,6 +142,7 @@ export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasS
       const transformer = transformerRef.current;
       transformer?.hide();
       guideGroupRef.current?.hide();
+      safeGroupRef.current?.hide();
 
       // 원본 1:1 크기로 임시 전환하여 부동소수점 오차 없는 정확한 픽셀 크기(1080x1080, 1080x1350, 1080x1920) 보장
       const prevWidth = stage.width();
@@ -163,10 +169,26 @@ export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasS
         stage.scaleY(prevScaleY);
         transformer?.show();
         guideGroupRef.current?.show();
+        safeGroupRef.current?.show();
         stage.draw();
       }
     },
-  }), [project.width, project.height, scale]);
+    projectId: () => project.id,
+    isReady() {
+      const stage = stageRef.current;
+      if (!stage) return false;
+      const expectedImages = project.layers.filter((layer) => layer.type === "image" && layer.visible).length;
+      return stage.find("Image").length >= expectedImages && document.fonts.status === "loaded";
+    },
+  }), [project.id, project.layers, project.width, project.height, scale]);
+
+  // 인스타그램 안전영역(참고용): 스토리는 위·아래 UI에 가려지는 영역, 피드는 프로필 그리드(3:4)에서 잘리는 좌우 영역.
+  const W = project.width;
+  const H = project.height;
+  const safe = !safeZone ? null
+    : H / W >= 1.7 ? { kind: "story" as const, top: (H * 250) / 1920, bottom: (H * 340) / 1920 }
+    : W > H * 0.75 + 1 ? { kind: "grid" as const, side: (W - H * 0.75) / 2 }
+    : null;
 
   // 드래그 중 캔버스 가장자리·중앙, 다른 레이어의 가장자리·중앙에 달라붙는 정렬 가이드.
   const isCropDrag = (node: Konva.Node) => !!cropLayerId && nodeRefs.current.get(cropLayerId) === node;
@@ -312,6 +334,27 @@ export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasS
                 <Line key={guide.id} listening={false} stroke="#22d3ee" strokeWidth={1 / scale}
                   points={guide.axis === "x" ? [guide.position, 0, guide.position, project.height] : [0, guide.position, project.width, guide.position]} />
               ))}
+            </Group>
+            <Group ref={safeGroupRef} listening={false}>
+              {safe?.kind === "story" && (
+                <>
+                  <Rect x={0} y={0} width={W} height={safe.top} fill="rgba(244, 63, 94, 0.30)" />
+                  <Rect x={0} y={H - safe.bottom} width={W} height={safe.bottom} fill="rgba(244, 63, 94, 0.30)" />
+                  <Line points={[0, safe.top, W, safe.top]} stroke="#f43f5e" strokeWidth={2 / scale} dash={[10 / scale, 6 / scale]} />
+                  <Line points={[0, H - safe.bottom, W, H - safe.bottom]} stroke="#f43f5e" strokeWidth={2 / scale} dash={[10 / scale, 6 / scale]} />
+                  <KonvaText x={0} y={safe.top / 2 - 14} width={W} align="center" text="프로필·상단 UI에 가려지는 영역" fontSize={28} fill="#ffffff" />
+                  <KonvaText x={0} y={H - safe.bottom / 2 - 14} width={W} align="center" text="답장·하단 UI에 가려지는 영역" fontSize={28} fill="#ffffff" />
+                </>
+              )}
+              {safe?.kind === "grid" && (
+                <>
+                  <Rect x={0} y={0} width={safe.side} height={H} fill="rgba(244, 63, 94, 0.30)" />
+                  <Rect x={W - safe.side} y={0} width={safe.side} height={H} fill="rgba(244, 63, 94, 0.30)" />
+                  <Line points={[safe.side, 0, safe.side, H]} stroke="#f43f5e" strokeWidth={2 / scale} dash={[10 / scale, 6 / scale]} />
+                  <Line points={[W - safe.side, 0, W - safe.side, H]} stroke="#f43f5e" strokeWidth={2 / scale} dash={[10 / scale, 6 / scale]} />
+                  <KonvaText x={safe.side} y={12} width={W - safe.side * 2} align="center" text="점선 밖은 프로필 그리드(3:4)에서 잘려요" fontSize={26} fill="#ffffff" />
+                </>
+              )}
             </Group>
             {guides.map((guide) => (
               <Line key={`${guide.axis}-${guide.position}`} listening={false} stroke="#ff4d8d" strokeWidth={1.5 / scale} dash={[6 / scale, 4 / scale]}

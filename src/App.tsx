@@ -18,6 +18,11 @@ import type { ShapeKind } from "./components/shape/ShapePanel";
 import type { AlignMode } from "./components/editor/PropertiesPanel";
 import type { GalleryTemplate } from "./features/template/galleryTemplates";
 import { useProjectHistory } from "./features/history/useProjectHistory";
+import { MAX_SLIDES, cloneSlide, createDeck, withCanvasSize } from "./features/deck/deck";
+import { SlideStrip } from "./components/slides/SlideStrip";
+import { createZip, dataUrlToBytes } from "./features/export/zip";
+import { clearSavedDeck, loadSavedDeck, saveDeck } from "./features/autosave/deckStore";
+import type { ExportScope } from "./components/export/ExportDialog";
 import { buildEmojiSticker, buildMemePreset } from "./features/meme/memePresets";
 import { groupMemberIds, normalizeGroups } from "./features/layer/groups";
 import { createStickerFromFile, loadStickers, saveStickers } from "./features/sticker/stickerStore";
@@ -42,9 +47,10 @@ import type { SavedTemplate } from "./features/template/templateStore";
 import "./App.css";
 
 const RATIO_PRESETS = [
-  { label: "1:1", width: 1080, height: 1080 },
-  { label: "4:5", width: 1080, height: 1350 },
-  { label: "9:16", width: 1080, height: 1920 },
+  { label: "1:1", width: 1080, height: 1080, hint: "정사각형 피드" },
+  { label: "4:5", width: 1080, height: 1350, hint: "인스타 피드 권장(가장 크게 보임)" },
+  { label: "3:4", width: 1080, height: 1440, hint: "프로필 그리드 비율" },
+  { label: "9:16", width: 1080, height: 1920, hint: "스토리·릴스" },
 ] as const;
 
 function initializeTemplates() {
@@ -59,7 +65,7 @@ function initializeTemplates() {
 }
 
 function App() {
-  const { project, setProject, undo, redo, canUndo, canRedo } = useProjectHistory(() => createEmptyProject(1080, 1080));
+  const { deck, project, setProject, setDeck, setActive, replaceDeck, undo, redo, canUndo, canRedo } = useProjectHistory(() => createDeck(1080, 1350));
   const [initialTemplates] = useState(initializeTemplates);
   const [templates, setTemplates] = useState(initialTemplates.templates);
   const [sidebarTab, setSidebarTab] = useState<"layers" | "templates" | "meme" | "gallery" | "shapes">("gallery");
@@ -71,6 +77,10 @@ function App() {
   const [cropTargetId, setCropTargetId] = useState<string | null>(null);
   const [isComparingOriginal, setIsComparingOriginal] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const [igGuide, setIgGuide] = useState(false);
+  const [exportProgress, setExportProgress] = useState<{ done: number; total: number } | null>(null);
+  const [caption, setCaption] = useState(() => { try { return localStorage.getItem("card-news-caption") ?? ""; } catch { return ""; } });
+  const [autosaveReady, setAutosaveReady] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [exportSettings, setExportSettings] = useState<ExportSettings>(loadExportSettings);
@@ -127,6 +137,7 @@ function App() {
       if (target && (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))) return;
       if (isExportOpen || isHelpOpen || isPaletteOpen) return; // 창이 열려 있는 동안 캔버스 단축키는 막는다
       if (mod && key === "e") { event.preventDefault(); setIsExportOpen(true); return; }
+      if (key === "pageup" || key === "pagedown") { event.preventDefault(); selectSlide(Math.min(deck.slides.length - 1, Math.max(0, deck.active + (key === "pagedown" ? 1 : -1)))); return; }
       if ((mod && key === "/") || event.key === "?") { event.preventDefault(); setIsHelpOpen(true); return; }
       if (!mod && event.shiftKey && key === "r") { event.preventDefault(); setRulersVisible((visible) => !visible); return; }
       if (mod && key === "z") { event.preventDefault(); if (event.shiftKey) redo(); else undo(); return; }
@@ -288,9 +299,22 @@ function App() {
   }
 
   function handleApplyGalleryTemplate(template: GalleryTemplate) {
-    const layers = structuredClone(template.canvas.layers).map((layer) => ({ ...layer, id: crypto.randomUUID() }));
-    setProject((p) => ({ ...p, width: template.canvas.width, height: template.canvas.height, backgroundColor: template.canvas.backgroundColor, layers, updatedAt: new Date().toISOString() }));
+    const freshLayers = (layers: Layer[]) => structuredClone(layers).map((layer) => ({ ...layer, id: crypto.randomUUID() }));
+    const now = new Date().toISOString();
+    if (template.slides) {
+      // 여러 장짜리 세트는 덱 전체를 교체한다(실행 취소 가능).
+      const slides = template.slides.map((canvas) => ({ id: crypto.randomUUID(), ...structuredClone(canvas), layers: freshLayers(canvas.layers), createdAt: now, updatedAt: now }));
+      setDeck(() => ({ slides, active: 0 }));
+    } else {
+      // 한 장짜리는 보고 있는 슬라이드만 교체하고, 캔버스 크기는 모든 슬라이드에 맞춘다.
+      setDeck((current) => withCanvasSize({
+        ...current,
+        slides: current.slides.map((slide, index) => index === current.active
+          ? { ...slide, backgroundColor: template.canvas.backgroundColor, layers: freshLayers(template.canvas.layers), updatedAt: now } : slide),
+      }, template.canvas.width, template.canvas.height));
+    }
     setSelectedLayerId(null);
+    setCropTargetId(null);
     setErrorMessage(null);
     setStatusMessage(`"${template.name}" 템플릿을 적용했습니다. 문구를 눌러 바꿔 보세요.`);
     setIsMobileSidebarOpen(false);
@@ -325,7 +349,10 @@ function App() {
   }
 
   function handleLoadTemplate(template: SavedTemplate) {
-    setProject(projectFromTemplate(template));
+    setDeck((current) => withCanvasSize({
+      ...current,
+      slides: current.slides.map((slide, index) => index === current.active ? projectFromTemplate(template) : slide),
+    }, template.canvas.width, template.canvas.height));
     setSelectedLayerId(null);
     setErrorMessage(null);
     setStatusMessage(`"${template.name}" 템플릿을 불러왔습니다.`);
@@ -470,25 +497,175 @@ function App() {
   }
 
   // 내보내기 창: 캔버스를 PNG로 뽑은 뒤 워터마크·형식·품질을 적용한다(미리보기와 다운로드가 같은 경로).
+  const pageRef = useRef({ index: 0, total: 1 });
+  useEffect(() => { pageRef.current = { index: deck.active, total: deck.slides.length }; });
+
   const renderExportData = useCallback(async (settings: ExportSettings) => {
     const stage = canvasStageRef.current;
     if (!stage) throw new Error("캔버스를 아직 렌더링하지 못했습니다.");
-    return renderExport(stage.toDataUrl("png", 1, settings.scale), settings);
+    return renderExport(stage.toDataUrl("png", 1, settings.scale), settings, pageRef.current);
   }, []);
 
-  async function handleExportDownload(settings: ExportSettings) {
+  /** 슬라이드 하나가 화면에 완전히 그려질 때까지 기다린다(이미지 로드·글꼴·필터 캐시). */
+  async function waitForSlide(slideId: string) {
+    const deadline = Date.now() + 10000;
+    while (Date.now() < deadline) {
+      const stage = canvasStageRef.current;
+      if (stage && stage.projectId() === slideId && stage.isReady()) { await new Promise((resolve) => window.setTimeout(resolve, 150)); return; }
+      await new Promise((resolve) => window.setTimeout(resolve, 60));
+    }
+    throw new Error("슬라이드를 그리는 데 시간이 너무 오래 걸립니다. 이미지가 너무 크지 않은지 확인해 주세요.");
+  }
+
+  /** 범위에 맞는 슬라이드들을 차례로 그려 파일 데이터로 만든다. 여러 장이면 슬라이드를 전환하며 캡처하고 원래 보던 장으로 돌아온다. */
+  async function renderSlideFiles(settings: ExportSettings, scope: ExportScope) {
+    const total = deck.slides.length;
+    const ext = settings.format;
+    if (scope === "current" || total === 1) {
+      return [{ name: createExportFileName(ext), dataUrl: await renderExportData(settings), bytes: null as Uint8Array | null }];
+    }
+    const original = deck.active;
+    setSelectedLayerId(null);
+    setCropTargetId(null);
+    setIsComparingOriginal(false);
+    const files: Array<{ name: string; dataUrl: string }> = [];
     try {
-      const dataUrl = await renderExportData(settings);
-      downloadDataUrl(dataUrl, createExportFileName(settings.format));
-      saveExportSettings(settings);
-      setIsExportOpen(false);
+      for (let index = 0; index < total; index++) {
+        setExportProgress({ done: index, total });
+        setActive(index);
+        await waitForSlide(deck.slides[index].id);
+        const stage = canvasStageRef.current;
+        if (!stage) throw new Error("캔버스를 아직 렌더링하지 못했습니다.");
+        const dataUrl = await renderExport(stage.toDataUrl("png", 1, settings.scale), settings, { index, total });
+        files.push({ name: `${String(index + 1).padStart(2, "0")}.${ext}`, dataUrl });
+      }
+    } finally {
+      setActive(original);
+      setExportProgress(null);
+    }
+    return files.map((file) => ({ ...file, bytes: null as Uint8Array | null }));
+  }
+
+  async function handleExportDownload(settings: ExportSettings, scope: ExportScope) {
+    saveExportSettings(settings);
+    setIsExportOpen(false);
+    try {
+      const files = await renderSlideFiles(settings, scope);
+      if (files.length === 1) {
+        downloadDataUrl(files[0].dataUrl, files[0].name);
+        setStatusMessage(`${settings.format.toUpperCase()} 파일로 내보냈습니다.`);
+      } else {
+        const zip = createZip(files.map((file) => ({ name: file.name, data: dataUrlToBytes(file.dataUrl) })));
+        const url = URL.createObjectURL(zip);
+        downloadDataUrl(url, createExportFileName("zip"));
+        window.setTimeout(() => URL.revokeObjectURL(url), 10000);
+        setStatusMessage(`${files.length}장을 ZIP으로 내보냈습니다. 압축을 풀어 순서대로(01, 02, …) 인스타그램에 올리세요.`);
+      }
       setErrorMessage(null);
-      setStatusMessage(`${settings.format.toUpperCase()} 파일로 내보냈습니다.`);
     } catch (error) {
       console.error("Export failed", error);
       setErrorMessage(error instanceof Error ? error.message : "내보내기에 실패했습니다.");
     }
   }
+
+  async function handleExportShare(settings: ExportSettings, scope: ExportScope) {
+    saveExportSettings(settings);
+    setIsExportOpen(false);
+    try {
+      const files = await renderSlideFiles(settings, scope);
+      const mime = settings.format === "png" ? "image/png" : settings.format === "jpg" ? "image/jpeg" : "image/webp";
+      const shareFiles = files.map((file, index) => new File([dataUrlToBytes(file.dataUrl) as BlobPart], files.length === 1 ? file.name : `${String(index + 1).padStart(2, "0")}.${settings.format}`, { type: mime }));
+      if (!navigator.canShare?.({ files: shareFiles })) throw new Error("이 기기는 파일 공유를 지원하지 않습니다. ZIP/이미지를 내려받아 인스타그램 앱에서 선택해 주세요.");
+      await navigator.share({ files: shareFiles, text: caption || undefined });
+      setStatusMessage("공유 창을 열었습니다. 인스타그램을 선택해 게시물을 이어서 작성하세요.");
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return; // 사용자가 공유 창을 닫음
+      console.error("Share failed", error);
+      setErrorMessage(error instanceof Error ? error.message : "공유에 실패했습니다.");
+    }
+  }
+
+  // ----- 슬라이드(캐러셀) 관리
+  function selectSlide(index: number) {
+    setActive(index);
+    setSelectedLayerId(null);
+    setCropTargetId(null);
+  }
+
+  function handleAddSlide() {
+    if (deck.slides.length >= MAX_SLIDES) return;
+    const now = new Date().toISOString();
+    setDeck((current) => {
+      const base = current.slides[current.active];
+      const blank = { ...createEmptyProject(base.width, base.height), backgroundColor: base.backgroundColor, createdAt: now, updatedAt: now };
+      const slides = [...current.slides.slice(0, current.active + 1), blank, ...current.slides.slice(current.active + 1)];
+      return { slides, active: current.active + 1 };
+    });
+    setSelectedLayerId(null);
+  }
+
+  function handleDuplicateSlide() {
+    if (deck.slides.length >= MAX_SLIDES) return;
+    setDeck((current) => {
+      const copy = cloneSlide(current.slides[current.active]);
+      const slides = [...current.slides.slice(0, current.active + 1), copy, ...current.slides.slice(current.active + 1)];
+      return { slides, active: current.active + 1 };
+    });
+    setSelectedLayerId(null);
+  }
+
+  function handleDeleteSlide() {
+    if (deck.slides.length <= 1) return;
+    setDeck((current) => {
+      const slides = current.slides.filter((_, index) => index !== current.active);
+      return { slides, active: Math.min(current.active, slides.length - 1) };
+    });
+    setSelectedLayerId(null);
+  }
+
+  function handleMoveSlide(direction: -1 | 1) {
+    setDeck((current) => {
+      const target = current.active + direction;
+      if (target < 0 || target >= current.slides.length) return current;
+      const slides = [...current.slides];
+      [slides[current.active], slides[target]] = [slides[target], slides[current.active]];
+      return { slides, active: target };
+    });
+  }
+
+  function handleSetCanvasSize(width: number, height: number) {
+    setDeck((current) => withCanvasSize(current, width, height));
+  }
+
+  function handleNewDeck() {
+    if (!window.confirm("현재 작업을 모두 지우고 새로 시작할까요? (실행 취소 기록도 사라집니다)")) return;
+    replaceDeck(createDeck(1080, 1350));
+    setSelectedLayerId(null);
+    setCropTargetId(null);
+    clearSavedDeck().catch(() => undefined);
+    setStatusMessage("새 작업을 시작했습니다.");
+  }
+
+  // ----- 자동 저장(IndexedDB): 시작할 때 복원하고, 변경 후 1.5초 뒤 저장한다.
+  useEffect(() => {
+    loadSavedDeck().then((saved) => {
+      if (saved) {
+        replaceDeck(saved);
+        setStatusMessage("이전에 작업하던 내용을 불러왔습니다. 처음부터 하려면 명령 팔레트(Ctrl+K)에서 ‘새로 시작’을 고르세요.");
+      }
+      setAutosaveReady(true);
+    }).catch(() => setAutosaveReady(true));
+  }, [replaceDeck]);
+
+  useEffect(() => {
+    if (!autosaveReady) return;
+    const timer = window.setTimeout(() => { saveDeck(deck).catch((error) => console.warn("Autosave failed", error)); }, 1500);
+    return () => window.clearTimeout(timer);
+  }, [deck, autosaveReady]);
+
+  useEffect(() => {
+    try { localStorage.setItem("card-news-caption", caption); } catch { /* 저장 공간 없음: 무시 */ }
+  }, [caption]);
 
   function handleAddGuide(axis: "x" | "y", position: number) {
     setRulerGuides((guides) => guides.some((g) => g.axis === axis && g.position === position) ? guides : [...guides, { id: crypto.randomUUID(), axis, position }]);
@@ -514,8 +691,15 @@ function App() {
       })),
       ...RATIO_PRESETS.map((preset): Command => ({
         id: `ratio-${preset.label}`, group: "캔버스", label: `화면비 ${preset.label}`, keywords: "비율 크기 ratio",
-        run: () => setProject((p) => ({ ...p, width: preset.width, height: preset.height, updatedAt: new Date().toISOString() })),
+        run: () => handleSetCanvasSize(preset.width, preset.height),
       })),
+      { id: "slide-add", group: "슬라이드", label: "슬라이드 추가", keywords: "carousel 캐러셀 장 페이지", run: handleAddSlide },
+      { id: "slide-dup", group: "슬라이드", label: "현재 슬라이드 복제", keywords: "carousel 캐러셀", run: handleDuplicateSlide },
+      { id: "slide-del", group: "슬라이드", label: "현재 슬라이드 삭제", keywords: "carousel 캐러셀", run: handleDeleteSlide },
+      { id: "slide-prev", group: "슬라이드", label: "이전 슬라이드", shortcut: "PageUp", run: () => selectSlide(Math.max(0, deck.active - 1)) },
+      { id: "slide-next", group: "슬라이드", label: "다음 슬라이드", shortcut: "PageDown", run: () => selectSlide(Math.min(deck.slides.length - 1, deck.active + 1)) },
+      { id: "ig-guide", group: "보기", label: igGuide ? "인스타 안전영역 가이드 끄기" : "인스타 안전영역 가이드 켜기", keywords: "instagram 인스타 safe zone 그리드", run: () => setIgGuide((on) => !on) },
+      { id: "new-deck", group: "파일", label: "새로 시작 (현재 작업 지우기)", keywords: "reset new 초기화", run: handleNewDeck },
       { id: "rulers", group: "보기", label: rulersVisible ? "눈금자 끄기" : "눈금자 켜기", shortcut: "Shift+R", keywords: "ruler 가이드", run: () => setRulersVisible((visible) => !visible) },
       { id: "clear-guides", group: "보기", label: "가이드선 모두 지우기", keywords: "guide", run: () => setRulerGuides([]) },
       { id: "export", group: "내보내기", label: "내보내기 창 열기 (PNG·JPG·WebP·워터마크)", shortcut: "Ctrl+E", keywords: "export 다운로드 저장 webp 워터마크", run: () => setIsExportOpen(true) },
@@ -578,8 +762,8 @@ function App() {
             {RATIO_PRESETS.map((preset) => {
               const isActive = project.width === preset.width && project.height === preset.height;
               return (
-                <button key={preset.label} type="button" className={isActive ? "active" : ""} aria-pressed={isActive}
-                  onClick={() => setProject((p) => ({ ...p, width: preset.width, height: preset.height, updatedAt: new Date().toISOString() }))}>
+                <button key={preset.label} type="button" className={isActive ? "active" : ""} aria-pressed={isActive} title={preset.hint}
+                  onClick={() => handleSetCanvasSize(preset.width, preset.height)}>
                   {preset.label}
                 </button>
               );
@@ -593,6 +777,7 @@ function App() {
         </div>
 
         <div className="topbar-group">
+          <button type="button" className={`btn ig-toggle ${igGuide ? "active" : ""}`} aria-pressed={igGuide} onClick={() => setIgGuide((on) => !on)} title="인스타그램 안전영역 가이드 (스토리 UI 영역·프로필 그리드 잘림)">IG</button>
           <button type="button" className={`btn icon-only ${rulersVisible ? "active" : ""}`} aria-pressed={rulersVisible} onClick={() => setRulersVisible((v) => !v)} title="눈금자 (Shift+R)" aria-label="눈금자 켜기/끄기">📏</button>
           <button type="button" className="btn icon-only" onClick={() => setIsPaletteOpen(true)} title="명령 팔레트 (Ctrl+K)" aria-label="명령 팔레트">⌕</button>
           <button type="button" className="btn icon-only desktop-only" onClick={() => setIsHelpOpen(true)} title="단축키 도움말 (?)" aria-label="단축키 도움말">⌨</button>
@@ -652,7 +837,8 @@ function App() {
           )}
         </div>
 
-        <CanvasStage ref={canvasStageRef} project={project} selectedLayerId={selectedLayerId} onSelectLayer={setSelectedLayerId} onChangeLayer={updateLayer} onMoveLayers={handleMoveLayers} cropLayerId={cropLayerId} originalViewLayerId={isComparingOriginal ? selectedLayerId : null}
+        <div className="canvas-column">
+        <CanvasStage ref={canvasStageRef} project={project} safeZone={igGuide} selectedLayerId={selectedLayerId} onSelectLayer={setSelectedLayerId} onChangeLayer={updateLayer} onMoveLayers={handleMoveLayers} cropLayerId={cropLayerId} originalViewLayerId={isComparingOriginal ? selectedLayerId : null}
           rulersVisible={rulersVisible} rulerGuides={rulerGuides} onAddGuide={handleAddGuide} onClearGuides={() => setRulerGuides([])} />
         {cropLayerId && (
           <div className="crop-hint" role="status">
@@ -660,6 +846,8 @@ function App() {
             <button type="button" onClick={() => setCropTargetId(null)}>완료</button>
           </div>
         )}
+        <SlideStrip slides={deck.slides} active={deck.active} onSelect={selectSlide} onAdd={handleAddSlide} onDuplicate={handleDuplicateSlide} onDelete={handleDeleteSlide} onMove={handleMoveSlide} />
+        </div>
 
         <div className={`props-shell ${isStyleSheetOpen ? "mobile-open" : ""}`}>
           <button type="button" className="props-peek" aria-expanded={isStyleSheetOpen} onClick={() => setIsStyleSheetOpen((isOpen) => !isOpen)}>
@@ -673,8 +861,14 @@ function App() {
       </main>
 
       {isExportOpen && (
-        <ExportDialog settings={exportSettings} baseSize={{ width: project.width, height: project.height }} onChange={setExportSettings}
-          onClose={() => setIsExportOpen(false)} onRender={renderExportData} onDownload={handleExportDownload} />
+        <ExportDialog settings={exportSettings} baseSize={{ width: project.width, height: project.height }} slideCount={deck.slides.length} activeIndex={deck.active}
+          caption={caption} onCaptionChange={setCaption} canShare={typeof navigator.canShare === "function"} onChange={setExportSettings}
+          onClose={() => setIsExportOpen(false)} onRender={renderExportData} onDownload={handleExportDownload} onShare={handleExportShare} />
+      )}
+      {exportProgress && (
+        <div className="modal-backdrop" role="alertdialog" aria-live="polite" aria-label="내보내는 중">
+          <div className="modal progress-modal"><strong>슬라이드 내보내는 중…</strong><span>{exportProgress.done + 1} / {exportProgress.total}</span><div className="progress-bar"><div style={{ width: `${((exportProgress.done + 1) / exportProgress.total) * 100}%` }} /></div></div>
+        </div>
       )}
       {isHelpOpen && <ShortcutHelp onClose={() => setIsHelpOpen(false)} />}
       {isPaletteOpen && <CommandPalette commands={buildCommands()} onClose={() => setIsPaletteOpen(false)} />}

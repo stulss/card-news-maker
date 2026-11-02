@@ -3,11 +3,14 @@ import type { CanvasProject, Layer, ShapeLayer, TextLayer } from "../../types/ca
 export const GALLERY_CATEGORIES = ["전체", "카드뉴스", "밈", "공지", "SNS"] as const;
 export type GalleryCategory = Exclude<(typeof GALLERY_CATEGORIES)[number], "전체">;
 
+export type GalleryCanvas = Pick<CanvasProject, "width" | "height" | "backgroundColor" | "layers">;
+
 export interface GalleryTemplate {
   id: string;
   name: string;
   category: GalleryCategory;
-  canvas: Pick<CanvasProject, "width" | "height" | "backgroundColor" | "layers">;
+  canvas: GalleryCanvas; // 한 장짜리면 이 캔버스, 세트면 첫 장(썸네일)
+  slides?: GalleryCanvas[]; // 있으면 여러 장짜리 캐러셀 세트
 }
 
 type Rect = { x: number; y: number; width: number; height: number };
@@ -28,8 +31,50 @@ function make(id: string, name: string, category: GalleryCategory, width: number
   return { id, name, category, canvas: { width, height, backgroundColor, layers: layers.map((layer, index) => ({ ...layer, zIndex: index })) } };
 }
 
+function canvasOf(width: number, height: number, backgroundColor: string, layers: Layer[]): GalleryCanvas {
+  return { width, height, backgroundColor, layers: layers.map((layer, index) => ({ ...layer, zIndex: index })) };
+}
+
+interface SetTheme { bg: string; ink: string; sub: string; accent: string }
+
+/** 인스타 캐러셀용 여러 장 세트: 표지 → 본문 N장 → 마무리. 4:5(1080×1350) 기준. 페이지 번호는 내보내기 옵션으로 넣는다. */
+function makeSlideSet(id: string, name: string, theme: SetTheme, bodyCount: number, topic: string): GalleryTemplate {
+  const W = 1080;
+  const H = 1350;
+  const cover = canvasOf(W, H, theme.bg, [
+    box("포인트 바", { x: 80, y: 300, width: 140, height: 14 }, theme.accent),
+    text("제목", `${topic}\n핵심만 정리`, { x: 80, y: 350, width: 920, height: 420 }, { fontSize: 124, color: theme.ink, align: "left" }),
+    text("부제", "한 줄 소개를 입력하세요", { x: 80, y: 800, width: 920, height: 120 }, { fontSize: 46, bold: false, color: theme.sub, align: "left" }),
+    text("안내", "옆으로 넘겨서 확인하세요 →", { x: 80, y: 1100, width: 920, height: 70 }, { fontSize: 38, color: theme.accent, align: "left" }),
+  ]);
+  const bodies = Array.from({ length: bodyCount }, (_, i) => canvasOf(W, H, theme.bg, [
+    text("번호", String(i + 1).padStart(2, "0"), { x: 80, y: 130, width: 400, height: 200 }, { fontSize: 170, color: theme.accent, align: "left" }),
+    box("구분선", { x: 80, y: 360, width: 920, height: 6 }, theme.sub, { opacity: 0.4 }),
+    text("소제목", "소제목을 입력하세요", { x: 80, y: 420, width: 920, height: 200 }, { fontSize: 78, color: theme.ink, align: "left" }),
+    text("본문", "핵심 내용을 두세 줄로 간결하게 적어 주세요.\n한 장에는 하나의 메시지만 담는 것이 좋습니다.", { x: 80, y: 660, width: 920, height: 420 }, { fontSize: 50, bold: false, color: theme.ink, align: "left", lineHeight: 1.5 }),
+  ]));
+  const outro = canvasOf(W, H, theme.bg, [
+    text("마무리", "도움이 되셨나요?", { x: 80, y: 380, width: 920, height: 160 }, { fontSize: 96, color: theme.ink }),
+    text("행동 유도", "저장 · 공유 · 팔로우", { x: 80, y: 600, width: 920, height: 110 }, { fontSize: 62, color: theme.accent }),
+    text("계정", "@my_account", { x: 80, y: 780, width: 920, height: 80 }, { fontSize: 44, bold: false, color: theme.sub }),
+  ]);
+  const slides = [cover, ...bodies, outro];
+  return { id, name, category: "카드뉴스", canvas: cover, slides };
+}
+
+function createSlideSets(): GalleryTemplate[] {
+  return [
+    makeSlideSet("set-news-5", "캐러셀 5장 세트 · 다크", { bg: "#101828", ink: "#ffffff", sub: "#98a2b3", accent: "#8b5cf6" }, 3, "오늘의 이슈"),
+    makeSlideSet("set-tips-6", "캐러셀 6장 세트 · 라이트", { bg: "#f7f3ea", ink: "#24211d", sub: "#8a8478", accent: "#e8590c" }, 4, "꿀팁 모음"),
+  ];
+}
+
 /** 갤러리 템플릿은 코드에서 매번 새 id로 만들어 적용 시 원본이 오염되지 않게 한다. */
 export function createGalleryTemplates(): GalleryTemplate[] {
+  return [...createSlideSets(), ...createSingleTemplates()];
+}
+
+function createSingleTemplates(): GalleryTemplate[] {
   return [
     make("news-headline", "헤드라인 카드", "카드뉴스", 1080, 1350, "#101828", [
       box("포인트 바", { x: 80, y: 300, width: 120, height: 12 }, "#8b5cf6"),

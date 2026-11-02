@@ -1,6 +1,7 @@
 export type ExportFormat = "png" | "jpg" | "webp";
+export type ExportFileExtension = ExportFormat | "zip";
 
-export function createExportFileName(format: ExportFormat, now = new Date()) {
+export function createExportFileName(format: ExportFileExtension, now = new Date()) {
   const pad = (value: number) => String(value).padStart(2, "0");
   const date = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
   const time = `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
