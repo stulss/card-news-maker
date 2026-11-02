@@ -1,5 +1,6 @@
 import type { GradientFill, ShadowStyle } from "../../types/canvas";
 import { GRADIENT_PRESETS, cssGradient } from "../../features/design/gradients";
+import { SHADOW_PRESETS } from "../../features/design/effects";
 
 /** 어떤 CSS 색(#hex 또는 rgba())이든 컬러 피커용 #rrggbb로 바꾼다. */
 function toHex(color: string) {
@@ -78,6 +79,11 @@ export function ShadowFields({ shadow, onChange }: ShadowFieldsProps) {
   return (
     <fieldset className="panel-fields shadow-fields">
       <legend>그림자</legend>
+      <div className="chip-row" role="group" aria-label="그림자 프리셋">
+        {SHADOW_PRESETS.map((preset) => (
+          <button key={preset.label} type="button" onClick={() => onChange(preset.shadow ? { ...preset.shadow } : undefined)}>{preset.label}</button>
+        ))}
+      </div>
       <label className="toggle-row">
         <input type="checkbox" checked={!!shadow} onChange={(event) => onChange(event.target.checked ? { offsetX: 0, offsetY: 12, blur: 24, color: "rgba(0, 0, 0, 0.4)" } : undefined)} />
         <span>사용</span>

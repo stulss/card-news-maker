@@ -15,6 +15,27 @@ interface Props {
   onTransformEnd: (node: Konva.Image) => void;
 }
 
+/** 가장자리를 어둡게 하는 비네팅. 중심부는 그대로 두고 바깥으로 갈수록 곡선으로 어두워진다(노드 속성 `vignette` 0~100). */
+function vignetteFilter(this: Konva.Node, imageData: ImageData) {
+  const amount = (Number(this.getAttr("vignette")) || 0) / 100;
+  if (amount <= 0) return;
+  const { data, width, height } = imageData;
+  const cx = width / 2;
+  const cy = height / 2;
+  const maxDistance = Math.hypot(cx, cy);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const distance = Math.hypot(x - cx, y - cy) / maxDistance;
+      const falloff = Math.max(0, distance - 0.3) / 0.7;
+      const factor = 1 - amount * Math.min(1, falloff ** 1.7 * 1.25);
+      const index = (y * width + x) * 4;
+      data[index] *= factor;
+      data[index + 1] *= factor;
+      data[index + 2] *= factor;
+    }
+  }
+}
+
 function activeFilters(layer: ImageLayer, ignore: boolean) {
   const f = ignore ? undefined : layer.filters;
   const list: Array<typeof Konva.Filters.Brighten> = [];
@@ -27,6 +48,7 @@ function activeFilters(layer: ImageLayer, ignore: boolean) {
   if (f.saturation || f.hue) list.push(Konva.Filters.HSL);
   if (f.grain) list.push(Konva.Filters.Noise);
   if (f.mosaic) list.push(Konva.Filters.Pixelate);
+  if (f.vignette) list.push(vignetteFilter);
   return list;
 }
 
@@ -100,6 +122,7 @@ export function ImageLayerNode({ layer, cropMode = false, ignoreFilters = false,
       hue={ignoreFilters ? 0 : (((layer.filters?.hue ?? 0) % 360) + 360) % 360}
       noise={(ignoreFilters ? 0 : layer.filters?.grain ?? 0) / 100}
       pixelSize={Math.max(1, ignoreFilters ? 1 : layer.filters?.mosaic ?? 1)}
+      vignette={ignoreFilters ? 0 : layer.filters?.vignette ?? 0}
       globalCompositeOperation={layer.blendMode ?? "source-over"}
       listening={!layer.locked}
       draggable={!layer.locked}

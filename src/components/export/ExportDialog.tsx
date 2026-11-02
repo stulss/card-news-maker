@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createStickerFromFile } from "../../features/sticker/stickerStore";
 import { estimateBytes, formatBytes } from "../../features/export/exportImage";
 import type { ExportSettings, WatermarkPosition } from "../../features/export/exportImage";
 import type { ExportFormat } from "../../features/export/downloadCanvas";
@@ -34,6 +35,8 @@ export function ExportDialog({ settings, baseSize, slideCount, activeIndex, capt
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [scope, setScope] = useState<ExportScope>(slideCount > 1 ? "all" : "current");
   const [copied, setCopied] = useState(false);
+  const [logoError, setLogoError] = useState<string | null>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
   const multi = slideCount > 1;
   const effectiveScope: ExportScope = multi ? scope : "current";
 
@@ -137,7 +140,28 @@ export function ExportDialog({ settings, baseSize, slideCount, activeIndex, capt
               <label className="toggle-row"><input type="checkbox" checked={settings.watermark.enabled} onChange={(event) => setWatermark({ enabled: event.target.checked })} /><span>글자 워터마크 넣기</span></label>
               {settings.watermark.enabled && (
                 <>
-                  <input className="text-input" value={settings.watermark.text} maxLength={60} placeholder="예: @my_account" aria-label="워터마크 문구" onChange={(event) => setWatermark({ text: event.target.value })} />
+                  <div className="chip-row" role="group" aria-label="워터마크 종류">
+                    <button type="button" className={settings.watermark.kind === "text" ? "active" : ""} aria-pressed={settings.watermark.kind === "text"} onClick={() => setWatermark({ kind: "text" })}>글자</button>
+                    <button type="button" className={settings.watermark.kind === "image" ? "active" : ""} aria-pressed={settings.watermark.kind === "image"} onClick={() => setWatermark({ kind: "image" })}>로고 이미지</button>
+                  </div>
+                  {settings.watermark.kind === "text" ? (
+                    <input className="text-input" value={settings.watermark.text} maxLength={60} placeholder="예: @my_account" aria-label="워터마크 문구" onChange={(event) => setWatermark({ text: event.target.value })} />
+                  ) : (
+                    <div className="logo-picker">
+                      {settings.watermark.image && <img className="logo-preview" src={settings.watermark.image} alt="로고 미리보기" />}
+                      <button type="button" className="btn" onClick={() => logoInputRef.current?.click()}>{settings.watermark.image ? "로고 바꾸기" : "로고 이미지 선택"}</button>
+                      {settings.watermark.image && <button type="button" className="btn" onClick={() => setWatermark({ image: undefined })}>삭제</button>}
+                      <input ref={logoInputRef} type="file" accept="image/png,image/webp,image/jpeg" hidden onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        event.target.value = "";
+                        if (!file) return;
+                        setLogoError(null);
+                        createStickerFromFile(file).then((logo) => setWatermark({ image: logo.src })).catch((error: unknown) => setLogoError(error instanceof Error ? error.message : "로고를 불러오지 못했습니다."));
+                      }} />
+                      {logoError && <p className="export-warn">{logoError}</p>}
+                      {!settings.watermark.image && <p className="panel-hint">투명 배경 PNG를 권장해요. 크기는 아래 "글자 크기" 슬라이더로 조절합니다.</p>}
+                    </div>
+                  )}
                   <select value={settings.watermark.position} aria-label="워터마크 위치" onChange={(event) => setWatermark({ position: event.target.value as WatermarkPosition })}>
                     {POSITIONS.map((position) => <option key={position.id} value={position.id}>{position.label}</option>)}
                   </select>

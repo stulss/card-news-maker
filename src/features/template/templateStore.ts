@@ -71,7 +71,7 @@ function hasValidOptionalFilters(filters: unknown) {
   const inRange = (key: string, min: number, max: number) =>
     filters[key] === undefined || (typeof filters[key] === "number" && Number.isFinite(filters[key]) && filters[key] >= min && filters[key] <= max);
   const isFlag = (key: string) => filters[key] === undefined || typeof filters[key] === "boolean";
-  return inRange("brightness", -1, 1) && inRange("contrast", -100, 100) && inRange("blur", 0, 40) && inRange("saturation", -1, 1) && inRange("hue", -180, 180) && inRange("grain", 0, 100) && inRange("mosaic", 0, 40) && isFlag("grayscale") && isFlag("sepia");
+  return inRange("brightness", -1, 1) && inRange("contrast", -100, 100) && inRange("blur", 0, 40) && inRange("saturation", -1, 1) && inRange("hue", -180, 180) && inRange("grain", 0, 100) && inRange("mosaic", 0, 40) && inRange("vignette", 0, 100) && isFlag("grayscale") && isFlag("sepia");
 }
 
 function hasValidOptionalCrop(layer: Record<string, unknown>) {

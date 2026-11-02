@@ -2,6 +2,7 @@ import { BLEND_MODES } from "../../types/canvas";
 import { useState } from "react";
 import type { BlendMode, GradientFill, ImageFilters, ImageLayer, Layer, ShapeLayer, TextLayer } from "../../types/canvas";
 import { TextStylePanel } from "./TextStylePanel";
+import { PanelSection } from "./PanelSection";
 import { GradientEditor, ShadowFields } from "./DesignControls";
 
 export type AlignMode = "left" | "hcenter" | "right" | "top" | "vcenter" | "bottom";
@@ -15,7 +16,10 @@ const ALIGN_BUTTONS: Array<{ mode: AlignMode; icon: string; label: string }> = [
   { mode: "bottom", icon: "⤓", label: "아래" },
 ];
 
-const BLEND_LABELS: Record<BlendMode, string> = { multiply: "곱하기", screen: "스크린", overlay: "오버레이", darken: "어둡게", lighten: "밝게" };
+const BLEND_LABELS: Record<BlendMode, string> = {
+  multiply: "곱하기", screen: "스크린", overlay: "오버레이", darken: "어둡게", lighten: "밝게",
+  "color-dodge": "색상 닷지", "color-burn": "색상 번", "hard-light": "하드 라이트", "soft-light": "소프트 라이트", difference: "차이", exclusion: "제외",
+};
 
 const CROP_RATIOS: Array<{ label: string; ratio: number | "canvas" }> = [
   { label: "1:1", ratio: 1 },
@@ -29,6 +33,9 @@ interface Props {
   canvasSize: { width: number; height: number };
   isCropMode: boolean;
   onToggleCropMode: () => void;
+  canPasteStyle: boolean;
+  onCopyStyle: () => void;
+  onPasteStyle: () => void;
   background: { color: string; gradient?: GradientFill };
   slideCount: number;
   onBackgroundChange: (background: { color: string; gradient?: GradientFill }, coalesceKey?: string) => void;
@@ -50,6 +57,7 @@ const FILTER_PRESETS: Array<{ label: string; filters: ImageFilters }> = [
   { label: "어둡게", filters: { brightness: -0.3 } },
   { label: "빈티지", filters: { sepia: true, contrast: 10, grain: 25 } },
   { label: "차가운 톤", filters: { hue: -20, saturation: 0.15, brightness: 0.04 } },
+  { label: "시네마", filters: { contrast: 18, saturation: -0.15, vignette: 45, grain: 14 } },
   { label: "흐림", filters: { blur: 8 } },
 ];
 
@@ -65,6 +73,7 @@ function scaleFilters(filters: ImageFilters, factor: number): ImageFilters {
   if (filters.hue !== undefined) out.hue = clamp(filters.hue * factor, -180, 180);
   if (filters.grain !== undefined) out.grain = clamp(filters.grain * factor, 0, 100);
   if (filters.mosaic !== undefined) out.mosaic = clamp(filters.mosaic * factor, 0, 40);
+  if (filters.vignette !== undefined) out.vignette = clamp(filters.vignette * factor, 0, 100);
   if (filters.grayscale && factor >= 0.5) out.grayscale = true;
   if (filters.sepia && factor >= 0.5) out.sepia = true;
   return out;
@@ -85,8 +94,7 @@ function ImageCropSection({ layer, canvasSize, isCropMode, onToggleCropMode, onC
     onChange({ width, height, x: centerX - width / 2, y: centerY - height / 2 });
   };
   return (
-    <section className="panel-section" aria-label="이미지 자르기">
-      <h3>자르기</h3>
+    <PanelSection title="자르기" label="이미지 자르기">
       <button type="button" className={`btn ${isCropMode ? "primary" : ""}`} aria-pressed={isCropMode} onClick={onToggleCropMode}>
         {isCropMode ? "✓ 캔버스에서 자르는 중 (눌러서 완료)" : "✂ 캔버스에서 직접 자르기"}
       </button>
@@ -110,14 +118,13 @@ function ImageCropSection({ layer, canvasSize, isCropMode, onToggleCropMode, onC
         </label>
         <button type="button" className="btn" onClick={() => onChange({ cropZoom: 1, focusX: 0.5, focusY: 0.5 })}>자르기 초기화</button>
       </div>
-    </section>
+    </PanelSection>
   );
 }
 
 function ShapeSection({ layer, onChange }: { layer: ShapeLayer; onChange: Props["onChange"] }) {
   return (
-    <section className="panel-section" aria-label="도형 스타일">
-      <h3>도형</h3>
+    <PanelSection title="도형" label="도형 스타일">
       <GradientEditor label="채우기" color={layer.fillColor} gradient={layer.fillGradient} showPresets
         onColorChange={(color) => onChange({ fillColor: color }, "shape-fill")}
         onGradientChange={(gradient) => onChange({ fillGradient: gradient })} />
@@ -127,14 +134,13 @@ function ShapeSection({ layer, onChange }: { layer: ShapeLayer; onChange: Props[
           <label><span>모서리 둥글기 <output>{layer.cornerRadius ?? 0}</output></span><input type="range" min="0" max="300" value={layer.cornerRadius ?? 0} onChange={(e) => onChange({ cornerRadius: Number(e.target.value) }, "shape-radius")} /></label>
         )}
       </div>
-    </section>
+    </PanelSection>
   );
 }
 
 function ImageStyleSection({ layer, onChange }: { layer: ImageLayer; onChange: Props["onChange"] }) {
   return (
-    <section className="panel-section" aria-label="이미지 모양">
-      <h3>모양</h3>
+    <PanelSection title="모양" label="이미지 모양">
       <div className="panel-fields">
         <label><span>모서리 둥글기 <output>{layer.cornerRadius ?? 0}</output></span>
           <input type="range" min="0" max="500" value={layer.cornerRadius ?? 0} onChange={(e) => onChange({ cornerRadius: Number(e.target.value) }, "image-radius")} /></label>
@@ -142,19 +148,18 @@ function ImageStyleSection({ layer, onChange }: { layer: ImageLayer; onChange: P
           <div className="color-field"><input type="color" value={layer.borderColor ?? "#ffffff"} onChange={(e) => onChange({ borderColor: e.target.value }, "image-border")} />
             <input type="range" min="0" max="60" value={layer.borderWidth ?? 0} onChange={(e) => onChange({ borderWidth: Number(e.target.value) }, "image-border-w")} aria-label="테두리 두께" /><output>{layer.borderWidth ?? 0}</output></div></label>
       </div>
-    </section>
+    </PanelSection>
   );
 }
 
 function BackgroundSection({ background, slideCount, onBackgroundChange, onApplyBackgroundToAll }: Pick<Props, "background" | "slideCount" | "onBackgroundChange" | "onApplyBackgroundToAll">) {
   return (
-    <section className="panel-section" aria-label="캔버스 배경">
-      <h3>캔버스 배경</h3>
+    <PanelSection title="캔버스 배경" label="캔버스 배경">
       <GradientEditor label="배경" color={background.color} gradient={background.gradient} showPresets
         onColorChange={(color) => onBackgroundChange({ color, gradient: undefined }, "bg-color")}
         onGradientChange={(gradient) => onBackgroundChange({ color: background.color, gradient })} />
       {slideCount > 1 && <button type="button" className="btn" onClick={onApplyBackgroundToAll}>이 배경을 모든 슬라이드({slideCount}장)에 적용</button>}
-    </section>
+    </PanelSection>
   );
 }
 
@@ -166,8 +171,7 @@ function ImageAdjustSection({ layer, onChange, onCompareOriginal }: { layer: Ima
   const setFilters = (changes: ImageFilters, key?: string) => onChange({ filters: { ...filters, ...changes } }, key);
 
   return (
-    <section className="panel-section" aria-label="이미지 보정">
-      <h3>이미지 보정</h3>
+    <PanelSection title="이미지 보정" label="이미지 보정">
       <button type="button" className="btn" title="누르고 있는 동안 보정 전 원본을 보여 줍니다"
         onPointerDown={() => onCompareOriginal(true)} onPointerUp={() => onCompareOriginal(false)} onPointerLeave={() => onCompareOriginal(false)} onPointerCancel={() => onCompareOriginal(false)}>
         ◐ 누르는 동안 원본 보기
@@ -213,12 +217,16 @@ function ImageAdjustSection({ layer, onChange, onCompareOriginal }: { layer: Ima
           <span>모자이크 <output>{filters.mosaic ?? 0}</output></span>
           <input type="range" min="0" max="40" value={filters.mosaic ?? 0} onChange={(e) => setFilters({ mosaic: Number(e.target.value) }, "filter-mosaic")} />
         </label>
+        <label>
+          <span>비네팅 <output>{filters.vignette ?? 0}</output></span>
+          <input type="range" min="0" max="100" value={filters.vignette ?? 0} onChange={(e) => setFilters({ vignette: Number(e.target.value) }, "filter-vignette")} />
+        </label>
       </div>
-    </section>
+    </PanelSection>
   );
 }
 
-export function PropertiesPanel({ layer, canvasSize, isCropMode, onToggleCropMode, background, slideCount, onBackgroundChange, onApplyBackgroundToAll, onCompareOriginal, onAlign, onChange, onDuplicate, onDelete }: Props) {
+export function PropertiesPanel({ layer, canvasSize, isCropMode, onToggleCropMode, canPasteStyle, onCopyStyle, onPasteStyle, background, slideCount, onBackgroundChange, onApplyBackgroundToAll, onCompareOriginal, onAlign, onChange, onDuplicate, onDelete }: Props) {
   if (!layer) {
     return (
       <aside className="properties-panel" aria-label="속성">
@@ -234,6 +242,8 @@ export function PropertiesPanel({ layer, canvasSize, isCropMode, onToggleCropMod
       <div className="panel-title-row">
         <h2>{layer.name}</h2>
         <div className="panel-title-actions">
+          <button type="button" onClick={onCopyStyle} title="이 레이어의 스타일 복사" aria-label="스타일 복사">⎘</button>
+          <button type="button" onClick={onPasteStyle} disabled={!canPasteStyle} title="복사한 스타일 붙여넣기" aria-label="스타일 붙여넣기">⇩</button>
           <button type="button" onClick={onDuplicate} title="복제 (Ctrl+D)" aria-label="복제">⧉</button>
           <button type="button" className="danger" onClick={onDelete} title="삭제 (Delete)" aria-label="삭제">✕</button>
         </div>
@@ -247,8 +257,7 @@ export function PropertiesPanel({ layer, canvasSize, isCropMode, onToggleCropMod
       {layer.type === "image" && <ImageStyleSection layer={layer} onChange={onChange} />}
       {layer.type === "image" && <ImageAdjustSection key={layer.id} layer={layer} onChange={onChange} onCompareOriginal={onCompareOriginal} />}
 
-      <section className="panel-section" aria-label="공통 속성">
-        <h3>공통</h3>
+      <PanelSection title="공통" label="공통 속성">
         {layer.type !== "text" && <ShadowFields shadow={layer.shadow} onChange={(shadow) => onChange({ shadow })} />}
         <div className="align-row" role="group" aria-label="캔버스 기준 정렬">
           {ALIGN_BUTTONS.map((button) => (
@@ -268,7 +277,7 @@ export function PropertiesPanel({ layer, canvasSize, isCropMode, onToggleCropMod
             <input type="range" min="0" max="100" value={Math.round((layer.opacity ?? 1) * 100)} onChange={(e) => onChange({ opacity: Number(e.target.value) / 100 }, "opacity")} />
           </label>
         </div>
-      </section>
+      </PanelSection>
     </aside>
   );
 }

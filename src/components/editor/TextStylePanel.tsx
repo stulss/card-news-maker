@@ -1,4 +1,6 @@
 import type { TextLayer } from "../../types/canvas";
+import { PanelSection } from "./PanelSection";
+import { SHADOW_PRESETS } from "../../features/design/effects";
 
 interface Props {
   layer: TextLayer;
@@ -14,8 +16,7 @@ const FONT_OPTIONS = [
 
 export function TextStylePanel({ layer, onChange }: Props) {
   return (
-    <section className="panel-section" aria-label="텍스트 스타일">
-      <h3>텍스트</h3>
+    <PanelSection title="텍스트" label="텍스트 스타일">
       {(
         <div className="panel-fields">
           <label>
@@ -87,6 +88,11 @@ export function TextStylePanel({ layer, onChange }: Props) {
 
           <fieldset>
             <legend>그림자</legend>
+            <div className="chip-row" role="group" aria-label="그림자 프리셋">
+              {SHADOW_PRESETS.map((preset) => (
+                <button key={preset.label} type="button" onClick={() => onChange({ shadow: preset.shadow ? { ...preset.shadow } : undefined })}>{preset.label}</button>
+              ))}
+            </div>
             <label className="toggle-row">
               <input type="checkbox" checked={!!layer.shadow} onChange={(event) => onChange({ shadow: event.target.checked ? { offsetX: 4, offsetY: 4, blur: 8, color: "#000000" } : undefined })} />
               <span>사용</span>
@@ -109,6 +115,6 @@ export function TextStylePanel({ layer, onChange }: Props) {
           </fieldset>
         </div>
       )}
-    </section>
+    </PanelSection>
   );
 }

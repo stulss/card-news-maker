@@ -17,7 +17,7 @@
 | `작업내역_체크리스트.md` | **진행 상황·결정 기록·작업 로그.** AI 공용 인수인계 파일이자 단일 진실 공급원 |
 | `docs/09_디자인_가이드.md` | 디자인 시스템·그래픽 도구·구현 메모 |
 | `docs/08_인스타그램_사용가이드.md` | 인스타 규격·작업 순서·업로드 방법·한계 |
-| `PRD.md` | 개발요청서 47장. 기능 요구사항·화면 설계·데이터 구조(43·44장 야구/백엔드는 폐기, 45장이 2차 기능) |
+| `PRD.md` | 개발요청서 48장. 기능 요구사항·화면 설계·데이터 구조(43·44장 야구/백엔드는 폐기, 45장이 2차 기능) |
 | `CLAUDE.md` | AI가 폴더를 통째로 읽지 않도록 하는 토큰 절약 규칙 |
 | `AGENTS.md` / `GEMINI.md` | Codex·Antigravity 프로젝트 진입 지침 |
 | `docs/01_기획.md` | 구현된 아키텍처·기술 선택 요약 |
@@ -54,7 +54,7 @@
 
 ```text
 card-news-maker/
-├── PRD.md                       # 개발요청서 47장
+├── PRD.md                       # 개발요청서 48장
 ├── CLAUDE.md                    # AI 작업 규칙
 ├── AGENTS.md / GEMINI.md        # Codex / Antigravity 진입 지침
 ├── README.md
@@ -72,6 +72,7 @@ card-news-maker/
     ├── components/editor/       # PropertiesPanel(공통 투명도·이미지 보정), TextStylePanel
     ├── components/layer/        # LayerPanel
     ├── components/template/     # TemplatePanel(내 템플릿), GalleryPanel(갤러리)(내 템플릿), GalleryPanel(갤러리)
+    ├── components/welcome/      # WelcomeCard — 빈 작업 시작 카드
     ├── components/text/         # TextPanel — 텍스트 스타일 프리셋
     ├── components/slides/       # SlideStrip — 슬라이드 목록
     ├── components/common/       # LayerThumb — 갤러리·슬라이드 공용 썸네일
@@ -129,6 +130,11 @@ card-news-maker/
 | 그라디언트·도형 | 배경·도형 그라디언트(프리셋 12종), 하트·말풍선·화살표·번개·북마크 벡터 도형 |
 | 효과 | 모든 레이어 그림자, 이미지 모서리·테두리, 텍스트 스타일 프리셋(헤드라인·형광펜·배지 등) |
 | 테마 | 다크/라이트 전환(☀/☾) |
+| 스타일 복사 | 레이어 스타일 복사(⎘)·붙여넣기(⇩) |
+| 효과 프리셋 | 그림자·네온 글로우 7종, 이미지 비네팅·시네마 프리셋, 혼합 모드 11종 |
+| 구도 격자 | Shift+G — 3분할 / 12분할 격자(내보내기 제외) |
+| 로고 워터마크 | 내보내기에서 글자 또는 로고 이미지 워터마크 |
+| 시작 카드 | 빈 작업에서 크기·세트·갤러리로 바로 시작 |
 | 단축키 | Ctrl+D 복제, Delete 삭제, 방향키 1px(Shift 10px) 이동, Esc 선택 해제 |
 
 ## 범위 밖

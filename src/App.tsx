@@ -17,7 +17,11 @@ import type { ExportSettings } from "./features/export/exportImage";
 import { SHAPE_OPTIONS } from "./features/design/shapeOptions";
 import type { ShapeKind } from "./features/design/shapeOptions";
 import { TextPanel } from "./components/text/TextPanel";
+import { WelcomeCard } from "./components/welcome/WelcomeCard";
+import { createGalleryTemplates } from "./features/template/galleryTemplates";
 import { TEXT_PRESETS } from "./features/design/textPresets";
+import { copyStyle, pasteStyle } from "./features/design/layerStyle";
+import type { LayerStyle } from "./features/design/layerStyle";
 import type { AlignMode } from "./components/editor/PropertiesPanel";
 import type { GalleryTemplate } from "./features/template/galleryTemplates";
 import { useProjectHistory } from "./features/history/useProjectHistory";
@@ -88,6 +92,8 @@ function App() {
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [exportSettings, setExportSettings] = useState<ExportSettings>(loadExportSettings);
   const [rulersVisible, setRulersVisible] = useState(false);
+  const [gridMode, setGridMode] = useState<"off" | "thirds" | "grid">("off");
+  const [styleClipboard, setStyleClipboard] = useState<LayerStyle | null>(null);
   const [theme, setTheme] = useState<"dark" | "light">(() => { try { return localStorage.getItem("card-news-theme") === "light" ? "light" : "dark"; } catch { return "dark"; } });
   const [rulerGuides, setRulerGuides] = useState<RulerGuide[]>([]);
   const [userStickers, setUserStickers] = useState<UserSticker[]>(loadStickers);
@@ -143,6 +149,7 @@ function App() {
       if (mod && key === "e") { event.preventDefault(); setIsExportOpen(true); return; }
       if (key === "pageup" || key === "pagedown") { event.preventDefault(); selectSlide(Math.min(deck.slides.length - 1, Math.max(0, deck.active + (key === "pagedown" ? 1 : -1)))); return; }
       if ((mod && key === "/") || event.key === "?") { event.preventDefault(); setIsHelpOpen(true); return; }
+      if (!mod && event.shiftKey && key === "g") { event.preventDefault(); cycleGrid(); return; }
       if (!mod && event.shiftKey && key === "r") { event.preventDefault(); setRulersVisible((visible) => !visible); return; }
       if (mod && key === "z") { event.preventDefault(); if (event.shiftKey) redo(); else undo(); return; }
       if (mod && key === "y") { event.preventDefault(); redo(); return; }
@@ -221,6 +228,33 @@ function App() {
     }]);
     setIsMobileSidebarOpen(false);
   }
+
+  function handleCopyStyle() {
+    if (!selectedLayer) return;
+    setStyleClipboard(copyStyle(selectedLayer));
+    setStatusMessage("스타일을 복사했습니다. 다른 레이어를 선택하고 붙여넣기(⇩)를 누르세요.");
+  }
+
+  function handlePasteStyle() {
+    if (!selectedLayer || !styleClipboard) return;
+    updateLayer(selectedLayer.id, pasteStyle(selectedLayer, styleClipboard));
+    setStatusMessage(selectedLayer.type === styleClipboard.type ? "스타일을 붙여넣었습니다." : "다른 종류의 레이어라 투명도·혼합 모드·그림자만 붙여넣었습니다.");
+  }
+
+  const isEmptyDeck = deck.slides.length === 1 && project.layers.length === 0;
+
+  function handleStartSet() {
+    const set = createGalleryTemplates().find((template) => template.slides);
+    if (set) handleApplyGalleryTemplate(set);
+  }
+
+  const canvasHint = cropLayerId
+    ? "이미지를 끌어 보이는 영역 이동 · 마우스 휠로 확대 · Esc로 종료"
+    : selectedLayer
+      ? "드래그 이동 · 모서리 핸들로 크기·회전 · 방향키 미세 이동 · Ctrl+D 복제 · Delete 삭제"
+      : "레이어를 클릭해 선택 · Ctrl+휠 확대 · Ctrl+K 명령 검색 · ? 단축키";
+
+  const cycleGrid = () => setGridMode((mode) => (mode === "off" ? "thirds" : mode === "thirds" ? "grid" : "off"));
 
   function handleAddTextPreset(presetId: string) {
     const preset = TEXT_PRESETS.find((candidate) => candidate.id === presetId);
@@ -739,6 +773,7 @@ function App() {
       { id: "slide-next", group: "슬라이드", label: "다음 슬라이드", shortcut: "PageDown", run: () => selectSlide(Math.min(deck.slides.length - 1, deck.active + 1)) },
       { id: "ig-guide", group: "보기", label: igGuide ? "인스타 안전영역 가이드 끄기" : "인스타 안전영역 가이드 켜기", keywords: "instagram 인스타 safe zone 그리드", run: () => setIgGuide((on) => !on) },
       { id: "new-deck", group: "파일", label: "새로 시작 (현재 작업 지우기)", keywords: "reset new 초기화", run: handleNewDeck },
+      { id: "grid", group: "보기", label: `구도 격자: ${gridMode === "off" ? "3분할 켜기" : gridMode === "thirds" ? "촘촘한 격자로" : "끄기"}`, shortcut: "Shift+G", keywords: "grid thirds 3분할 구도 격자", run: cycleGrid },
       { id: "rulers", group: "보기", label: rulersVisible ? "눈금자 끄기" : "눈금자 켜기", shortcut: "Shift+R", keywords: "ruler 가이드", run: () => setRulersVisible((visible) => !visible) },
       { id: "clear-guides", group: "보기", label: "가이드선 모두 지우기", keywords: "guide", run: () => setRulerGuides([]) },
       { id: "export", group: "내보내기", label: "내보내기 창 열기 (PNG·JPG·WebP·워터마크)", shortcut: "Ctrl+E", keywords: "export 다운로드 저장 webp 워터마크", run: () => setIsExportOpen(true) },
@@ -749,6 +784,8 @@ function App() {
     if (hasSelection) {
       list.push(
         { id: "duplicate", group: "선택 레이어", label: "복제", shortcut: "Ctrl+D", run: handleDuplicateLayer },
+        { id: "copy-style", group: "선택 레이어", label: "스타일 복사", keywords: "style graphic 그래픽 스타일", run: handleCopyStyle },
+        ...(styleClipboard ? [{ id: "paste-style", group: "선택 레이어", label: "스타일 붙여넣기", keywords: "style graphic 그래픽 스타일", run: handlePasteStyle } as Command] : []),
         { id: "delete", group: "선택 레이어", label: "삭제", shortcut: "Delete", run: () => handleDeleteLayer(selectedLayer.id) },
         ...(["left", "hcenter", "right", "top", "vcenter", "bottom"] as const).map((mode): Command => ({
           id: `align-${mode}`, group: "선택 레이어", label: `캔버스 ${{ left: "왼쪽", hcenter: "가로 가운데", right: "오른쪽", top: "위", vcenter: "세로 가운데", bottom: "아래" }[mode]} 정렬`,
@@ -879,8 +916,13 @@ function App() {
         </div>
 
         <div className="canvas-column">
-        <CanvasStage ref={canvasStageRef} project={project} safeZone={igGuide} selectedLayerId={selectedLayerId} onSelectLayer={setSelectedLayerId} onChangeLayer={updateLayer} onMoveLayers={handleMoveLayers} cropLayerId={cropLayerId} originalViewLayerId={isComparingOriginal ? selectedLayerId : null}
+        <CanvasStage ref={canvasStageRef} project={project} safeZone={igGuide} showEmptyHint={!isEmptyDeck} gridMode={gridMode} selectedLayerId={selectedLayerId} onSelectLayer={setSelectedLayerId} onChangeLayer={updateLayer} onMoveLayers={handleMoveLayers} cropLayerId={cropLayerId} originalViewLayerId={isComparingOriginal ? selectedLayerId : null}
           rulersVisible={rulersVisible} rulerGuides={rulerGuides} onAddGuide={handleAddGuide} onClearGuides={() => setRulerGuides([])} />
+        {isEmptyDeck && (
+          <WelcomeCard width={project.width} height={project.height} onSize={handleSetCanvasSize} onUpload={() => fileInputRef.current?.click()}
+            onAddHeadline={() => handleAddTextPreset("headline")} onStartSet={handleStartSet} onOpenGallery={() => { setSidebarTab("gallery"); setIsMobileSidebarOpen(true); }} />
+        )}
+        <div className="canvas-hint" aria-hidden="true">{canvasHint}</div>
         {cropLayerId && (
           <div className="crop-hint" role="status">
             <span>✂ 자르기 모드 · 이미지를 끌어 위치 조정 · 마우스 휠(또는 속성 슬라이더)로 확대</span>
@@ -896,7 +938,7 @@ function App() {
             <span className="sheet-summary">{selectedLayer ? `속성 · ${selectedLayer.name}` : "레이어를 선택하세요"}</span>
             <span aria-hidden="true">{isStyleSheetOpen ? "⌄" : "⌃"}</span>
           </button>
-          <PropertiesPanel layer={selectedLayer} background={{ color: project.backgroundColor, gradient: project.backgroundGradient }} slideCount={deck.slides.length} onBackgroundChange={handleBackgroundChange} onApplyBackgroundToAll={handleApplyBackgroundToAll} isCropMode={!!cropLayerId} onToggleCropMode={() => setCropTargetId(cropLayerId ? null : selectedLayer?.id ?? null)} onCompareOriginal={setIsComparingOriginal} onAlign={handleAlign} canvasSize={{ width: project.width, height: project.height }} onChange={(changes, key) => { if (selectedLayer) updateLayer(selectedLayer.id, changes, key); }}
+          <PropertiesPanel layer={selectedLayer} canPasteStyle={!!styleClipboard} onCopyStyle={handleCopyStyle} onPasteStyle={handlePasteStyle} background={{ color: project.backgroundColor, gradient: project.backgroundGradient }} slideCount={deck.slides.length} onBackgroundChange={handleBackgroundChange} onApplyBackgroundToAll={handleApplyBackgroundToAll} isCropMode={!!cropLayerId} onToggleCropMode={() => setCropTargetId(cropLayerId ? null : selectedLayer?.id ?? null)} onCompareOriginal={setIsComparingOriginal} onAlign={handleAlign} canvasSize={{ width: project.width, height: project.height }} onChange={(changes, key) => { if (selectedLayer) updateLayer(selectedLayer.id, changes, key); }}
             onDuplicate={handleDuplicateLayer} onDelete={() => { if (selectedLayer) handleDeleteLayer(selectedLayer.id); }} />
         </div>
       </main>

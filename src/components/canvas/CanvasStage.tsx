@@ -24,6 +24,8 @@ interface Props {
   cropLayerId?: string | null;
   originalViewLayerId?: string | null;
   safeZone?: boolean;
+  showEmptyHint?: boolean;
+  gridMode?: "off" | "thirds" | "grid";
   rulersVisible?: boolean;
   rulerGuides?: RulerGuide[];
   onAddGuide?: (axis: "x" | "y", position: number) => void;
@@ -47,7 +49,7 @@ function readNodeTransform(node: Konva.Node) {
 
 // 캔버스를 컨테이너 크기에 맞춰(fit) 표시한다 — PRD 14장.
 export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasStage(
-  { project, selectedLayerId, onSelectLayer, onChangeLayer, onMoveLayers, cropLayerId = null, originalViewLayerId = null, safeZone = false, rulersVisible = false, rulerGuides = [], onAddGuide, onClearGuides }, ref,
+  { project, selectedLayerId, onSelectLayer, onChangeLayer, onMoveLayers, cropLayerId = null, originalViewLayerId = null, safeZone = false, showEmptyHint = true, gridMode = "off", rulersVisible = false, rulerGuides = [], onAddGuide, onClearGuides }, ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
@@ -59,6 +61,7 @@ export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasS
   const areaRef = useRef<HTMLDivElement>(null);
   const guideGroupRef = useRef<Konva.Group>(null);
   const safeGroupRef = useRef<Konva.Group>(null);
+  const gridGroupRef = useRef<Konva.Group>(null);
   const [origin, setOrigin] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [guides, setGuides] = useState<Array<{ axis: "x" | "y"; position: number }>>([]);
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -145,6 +148,7 @@ export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasS
       transformer?.hide();
       guideGroupRef.current?.hide();
       safeGroupRef.current?.hide();
+      gridGroupRef.current?.hide();
 
       // 원본 1:1 크기로 임시 전환하여 부동소수점 오차 없는 정확한 픽셀 크기(1080x1080, 1080x1350, 1080x1920) 보장
       const prevWidth = stage.width();
@@ -172,6 +176,7 @@ export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasS
         transformer?.show();
         guideGroupRef.current?.show();
         safeGroupRef.current?.show();
+        gridGroupRef.current?.show();
         stage.draw();
       }
     },
@@ -183,6 +188,15 @@ export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasS
       return stage.find("Image").length >= expectedImages && document.fonts.status === "loaded";
     },
   }), [project.id, project.layers, project.width, project.height, scale]);
+
+  // 구도 격자: 3분할선 또는 12분할 촘촘한 격자(내보내기에는 찍히지 않음)
+  const gridLines: Array<{ key: string; points: number[] }> = [];
+  if (gridMode !== "off") {
+    const columns = gridMode === "thirds" ? 3 : 12;
+    const rows = gridMode === "thirds" ? 3 : Math.max(2, Math.round((project.height / project.width) * 12));
+    for (let i = 1; i < columns; i++) gridLines.push({ key: `v${i}`, points: [(project.width / columns) * i, 0, (project.width / columns) * i, project.height] });
+    for (let i = 1; i < rows; i++) gridLines.push({ key: `h${i}`, points: [0, (project.height / rows) * i, project.width, (project.height / rows) * i] });
+  }
 
   // 인스타그램 안전영역(참고용): 스토리는 위·아래 UI에 가려지는 영역, 피드는 프로필 그리드(3:4)에서 잘리는 좌우 영역.
   const W = project.width;
@@ -297,7 +311,7 @@ export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasS
           <KonvaLayer ref={contentLayerRef}>
             <Rect x={0} y={0} width={project.width} height={project.height} listening={false}
               {...(project.backgroundGradient ? konvaGradient(project.backgroundGradient, project.width, project.height) : { fill: project.backgroundColor })} />
-            {sortedLayers.length === 0 && <KonvaText text="이미지를 업로드하거나 텍스트를 추가해 보세요" x={0} y={project.height / 2 - 16} width={project.width} align="center" fontSize={28} fill="#B8B8B8" listening={false} />}
+            {sortedLayers.length === 0 && showEmptyHint && <KonvaText text="이미지를 업로드하거나 텍스트를 추가해 보세요" x={0} y={project.height / 2 - 16} width={project.width} align="center" fontSize={28} fill="#B8B8B8" listening={false} />}
             {sortedLayers.map((layer) => {
               if (layer.type === "image") {
                 return <ImageLayerNode key={layer.id} layer={layer} cropMode={cropLayerId === layer.id} ignoreFilters={originalViewLayerId === layer.id} onCropChange={(changes, key) => onChangeLayer(layer.id, changes, key)} nodeRef={rememberNode(layer.id)} onSelect={() => onSelectLayer(layer.id)} onDragEnd={(node) => commitMove(layer, node)} onTransformEnd={(node) => commitTransform(layer, node)} />;
@@ -349,6 +363,11 @@ export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasS
               {rulerGuides.map((guide) => (
                 <Line key={guide.id} listening={false} stroke="#22d3ee" strokeWidth={1 / scale}
                   points={guide.axis === "x" ? [guide.position, 0, guide.position, project.height] : [0, guide.position, project.width, guide.position]} />
+              ))}
+            </Group>
+            <Group ref={gridGroupRef} listening={false}>
+              {gridLines.map((line) => (
+                <Line key={line.key} points={line.points} stroke="#fbbf24" strokeWidth={1 / scale} opacity={0.7} dash={[6 / scale, 6 / scale]} />
               ))}
             </Group>
             <Group ref={safeGroupRef} listening={false}>

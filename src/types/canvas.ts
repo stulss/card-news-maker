@@ -21,7 +21,7 @@ export interface CanvasProject {
 
 // 허용하는 블렌드 모드는 화이트리스트로 제한한다. 임의 문자열(예: destination-out)을 열어 두면
 // 가져온 템플릿 JSON이 아래 레이어를 지울 수 있기 때문이다(templateStore가 같은 목록으로 검증한다).
-export const BLEND_MODES = ["multiply", "screen", "overlay", "darken", "lighten"] as const;
+export const BLEND_MODES = ["multiply", "screen", "overlay", "darken", "lighten", "color-dodge", "color-burn", "hard-light", "soft-light", "difference", "exclusion"] as const;
 export type BlendMode = (typeof BLEND_MODES)[number];
 
 export type Layer = ImageLayer | TextLayer | StickerLayer | ShapeLayer;
@@ -52,6 +52,7 @@ export interface ImageFilters {
   hue?: number; // -180~180도, 0이 원본
   grain?: number; // 0~100, 필름 입자(노이즈)
   mosaic?: number; // 0~40, 모자이크 블록 크기(px)
+  vignette?: number; // 0~100, 가장자리 어둡게(비네팅)
   grayscale?: boolean;
   sepia?: boolean;
 }

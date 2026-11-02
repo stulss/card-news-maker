@@ -326,3 +326,31 @@ kbd { padding: 2px 7px; border: 1px solid var(--color-border); border-radius: 6p
 :root[data-theme="light"] .tool-rail button.active { color: var(--color-accent-soft); }
 :root[data-theme="light"] .banner { background: oklch(0.93 0.06 160); color: oklch(0.32 0.08 160); }
 :root[data-theme="light"] .banner.error { background: oklch(0.93 0.05 25); color: oklch(0.38 0.14 25); }
+
+/* 로고 워터마크 · 스타일 복사 */
+.logo-picker { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.logo-preview { max-width: 72px; max-height: 40px; border: 1px solid var(--color-border); border-radius: 6px; background: repeating-conic-gradient(var(--color-bg-input) 0% 25%, var(--color-hover) 0% 50%) 0 0 / 10px 10px; object-fit: contain; }
+.shadow-fields .chip-row { margin-bottom: 4px; }
+.shadow-fields .chip-row button, .panel-section .chip-row button { height: 26px; padding: 0 10px; font-size: 11px; }
+.panel-title-actions button:disabled { opacity: 0.35; cursor: default; }
+
+/* 접히는 속성 섹션 · 시작 카드 · 상황별 힌트 */
+.panel-section h3 { margin: 0; }
+.section-toggle { display: flex; width: 100%; align-items: center; gap: 6px; padding: 2px 0; border: 0; background: transparent; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; text-align: left; cursor: pointer; }
+.section-toggle:hover { color: var(--color-text); }
+.chevron { width: 10px; color: var(--color-text-dim); font-size: 10px; }
+.panel-section.collapsed { gap: 0; }
+.welcome-card { position: absolute; z-index: 12; top: 50%; left: 50%; display: flex; width: min(560px, calc(100% - 32px)); max-height: calc(100% - 32px); flex-direction: column; gap: 14px; padding: 26px 28px; overflow-y: auto; border: 1px solid var(--color-border); border-radius: 22px; background: var(--color-bg-panel); box-shadow: var(--shadow-pop); transform: translate(-50%, -54%); }
+.welcome-card h2 { margin: 0; font-size: 22px; letter-spacing: -0.02em; }
+.welcome-card .panel-hint { margin-top: -8px; }
+.welcome-sizes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.welcome-sizes button { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 6px 10px; border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-bg-input); color: var(--color-text); font: inherit; cursor: pointer; }
+.welcome-sizes button:hover { border-color: var(--color-accent); transform: translateY(-2px); }
+.welcome-sizes button.active { border-color: var(--color-accent); background: oklch(0.68 0.19 285 / 0.16); }
+.welcome-sizes strong { font-size: 12px; }
+.welcome-sizes small { color: var(--color-text-dim); font-size: 10px; }
+.welcome-size-shape { display: block; width: 100%; max-width: 38px; max-height: 52px; border: 2px solid var(--color-accent-soft); border-radius: 4px; background: oklch(0.68 0.19 285 / 0.12); }
+.welcome-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.welcome-keys { margin: 0; color: var(--color-text-dim); font-size: 12px; }
+.canvas-hint { position: absolute; bottom: 10px; left: 14px; max-width: calc(100% - 200px); overflow: hidden; color: var(--color-text-dim); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; }
+@media (max-width: 900px) { .canvas-hint { display: none; } .welcome-sizes { grid-template-columns: repeat(2, minmax(0, 1fr)); } .welcome-card { transform: translate(-50%, -50%); padding: 18px; } }

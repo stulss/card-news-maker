@@ -9,6 +9,8 @@ export interface ExportSettings {
   pageNumber: boolean; // 여러 장일 때 하단 가운데에 "1 / 5" 표시
   watermark: {
     enabled: boolean;
+    kind: "text" | "image"; // 글자 워터마크 또는 로고 이미지
+    image?: string; // data:image/png;base64,… (로고)
     text: string;
     position: WatermarkPosition;
     opacity: number; // 10~100
@@ -21,7 +23,7 @@ export const DEFAULT_EXPORT_SETTINGS: ExportSettings = {
   quality: 90,
   scale: 1,
   pageNumber: false,
-  watermark: { enabled: false, text: "@my_account", position: "br", opacity: 70, size: 4 },
+  watermark: { enabled: false, kind: "text", text: "@my_account", position: "br", opacity: 70, size: 4 },
 };
 
 const STORAGE_KEY = "card-news-export-settings";
@@ -45,6 +47,8 @@ export function loadExportSettings(): ExportSettings {
       pageNumber: raw.pageNumber === true,
       watermark: {
         enabled: watermark.enabled === true,
+        kind: watermark.kind === "image" ? "image" : "text",
+        image: typeof watermark.image === "string" && watermark.image.startsWith("data:image/png;base64,") && watermark.image.length < 900_000 ? watermark.image : undefined,
         text: typeof watermark.text === "string" ? watermark.text.slice(0, 60) : defaults.watermark.text,
         position: POSITIONS.includes(watermark.position as WatermarkPosition) ? (watermark.position as WatermarkPosition) : defaults.watermark.position,
         opacity: clamp(watermark.opacity, 10, 100, defaults.watermark.opacity),
@@ -84,7 +88,21 @@ export async function renderExport(pngDataUrl: string, settings: ExportSettings,
   context.drawImage(image, 0, 0);
 
   const { watermark } = settings;
-  if (watermark.enabled && watermark.text.trim()) {
+  if (watermark.enabled && watermark.kind === "image" && watermark.image) {
+    const logo = await loadImage(watermark.image).catch(() => null);
+    if (logo) {
+      // 로고 폭은 캔버스 폭 대비 (글자 크기 슬라이더 × 3%), 최대 50%. 위치·진하기는 글자 워터마크와 같다.
+      const logoWidth = canvas.width * Math.min(0.5, watermark.size * 0.03);
+      const logoHeight = (logoWidth * logo.naturalHeight) / logo.naturalWidth;
+      const margin = Math.round(canvas.width * 0.03);
+      const left = watermark.position === "bl" || watermark.position === "tl" ? margin : watermark.position === "center" ? (canvas.width - logoWidth) / 2 : canvas.width - logoWidth - margin;
+      const top = watermark.position === "tl" || watermark.position === "tr" ? margin : watermark.position === "center" ? (canvas.height - logoHeight) / 2 : canvas.height - logoHeight - margin;
+      context.save();
+      context.globalAlpha = watermark.opacity / 100;
+      context.drawImage(logo, left, top, logoWidth, logoHeight);
+      context.restore();
+    }
+  } else if (watermark.enabled && watermark.text.trim()) {
     const fontSize = Math.max(10, Math.round((canvas.width * watermark.size) / 100));
     await document.fonts.load(`700 ${fontSize}px "IBM Plex Sans KR"`, watermark.text).catch(() => []);
     const margin = Math.round(fontSize * 0.8);

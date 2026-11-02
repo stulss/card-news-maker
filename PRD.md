@@ -2053,3 +2053,24 @@ GET /api/kbo-schedule?date=YYYY-MM-DD
 - `ShapeLayer.fillGradient?`, `shapeType`에 `heart|bubble|arrow|bolt|bookmark` 추가
 - 템플릿 검증(`templateStore`)과 자동 저장 복원 검증이 위 필드의 형식·범위를 확인한다.
 
+---
+
+## 48. 설치한 레퍼런스 앱 분석 반영 (2026-11-02)
+
+근거와 한계는 `docs/07_레퍼런스_분석.md` §7. 코드·에셋은 가져오지 않고 아이디어만 반영했다.
+
+| ID | 기능 | 요약 |
+|---|---|---|
+| F-70 | 레이어 스타일 복사/붙여넣기 | 같은 종류는 전체 스타일, 다른 종류는 투명도·혼합 모드·그림자만 |
+| F-71 | 그림자·글로우 프리셋 | 부드럽게·선명하게·레트로 입체·네온 3색 |
+| F-72 | 구도 격자 | Shift+G로 3분할/12분할 격자 순환(내보내기 제외) |
+| F-73 | 비네팅·시네마 | 이미지 비네팅 슬라이더, 시네마 프리셋(대비·채도·비네팅·입자) |
+| F-74 | 혼합 모드 11종 | 화이트리스트 유지(임의 값 거부) |
+| F-75 | 로고 워터마크 | 내보내기에서 글자 대신 로고 이미지, 위치·진하기·크기 |
+| F-76 | 시작 카드 | 빈 작업에서 크기·세트·갤러리·이미지·제목으로 바로 시작 |
+| F-77 | 접히는 속성 섹션·힌트 | 속성 섹션 접기/펼치기, 상황별 조작 힌트 줄 |
+
+### 데이터 구조 변경 (모두 선택 필드, 하위 호환)
+- `ImageFilters.vignette?: number`(0~100), `BLEND_MODES`에 6종 추가(`color-dodge`·`color-burn`·`hard-light`·`soft-light`·`difference`·`exclusion`)
+- 내보내기 설정(브라우저 저장)의 `watermark.kind: "text" | "image"`, `watermark.image?`(PNG data URL, 상한 약 900KB)
+
