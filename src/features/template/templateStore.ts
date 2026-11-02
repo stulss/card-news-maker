@@ -93,7 +93,7 @@ function hasValidOptionalNumber(value: unknown, min: number, max: number) {
 }
 
 const MASK_TYPES = ["circle", "star", "triangle", "hexagon", "heart", "bubble"];
-const SHAPE_TYPES = ["rectangle", "circle", "star", "triangle", "heart", "bubble", "arrow", "bolt", "bookmark", "speechBubble"];
+const SHAPE_TYPES = ["rectangle", "circle", "star", "triangle", "heart", "bubble", "arrow", "bolt", "bookmark", "speechBubble", "diamond", "cloud", "check", "plus", "ribbon"];
 
 function hasValidOptionalShadow(shadow: unknown) {
   if (shadow === undefined) return true;

@@ -418,3 +418,17 @@ kbd { padding: 2px 7px; border: 1px solid var(--color-border); border-radius: 6p
 .error-boundary { max-width: 440px; margin: 15vh auto 0; padding: 24px; text-align: center; color: var(--color-text, #ece9f6); }
 .error-boundary h1 { font-size: 22px; margin: 0 0 8px; }
 .error-boundary-detail { font-size: 12px; opacity: 0.6; word-break: break-word; }
+
+/* 브랜드 키트 · 요소 패널 */
+.brand-swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+.brand-swatch { position: relative; }
+.brand-swatch > button:first-child { width: 36px; height: 36px; border-radius: 10px; border: 2px solid var(--color-border); cursor: pointer; }
+.brand-swatch > button:first-child:hover { border-color: var(--color-text); }
+.brand-swatch-remove { position: absolute; top: -7px; right: -7px; width: 18px; height: 18px; padding: 0; border-radius: 50%; border: 1px solid var(--color-border); background: var(--color-surface, #222); color: var(--color-text); font-size: 12px; line-height: 1; cursor: pointer; opacity: 0; }
+.brand-swatch:hover .brand-swatch-remove, .brand-swatch-remove:focus-visible { opacity: 1; }
+.brand-add { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; }
+.brand-add input[type="color"], .mini-field input[type="color"] { width: 40px; height: 34px; padding: 0; border: 1px solid var(--color-border); border-radius: 8px; background: none; cursor: pointer; }
+.mini-field { display: flex; flex-direction: column; gap: 4px; color: var(--color-text-muted); font-size: 11px; }
+.mini-field select { height: 34px; }
+.panel-error { margin: 0; color: oklch(0.78 0.15 25); font-size: 12px; }
+@media (hover: none) { .brand-swatch-remove { opacity: 1; } }

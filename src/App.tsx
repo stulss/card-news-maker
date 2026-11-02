@@ -19,6 +19,11 @@ import type { ShapeKind } from "./features/design/shapeOptions";
 import { TextPanel } from "./components/text/TextPanel";
 import { WelcomeCard } from "./components/welcome/WelcomeCard";
 import { SizeDialog } from "./components/size/SizeDialog";
+import { BrandPanel } from "./components/brand/BrandPanel";
+import { ElementsPanel } from "./components/elements/ElementsPanel";
+import { loadBrandKit, saveBrandKit } from "./features/brand/brandStore";
+import type { BrandKit } from "./features/brand/brandStore";
+import { FONT_OPTIONS } from "./features/design/fontOptions";
 import { AboutDialog } from "./components/about/AboutDialog";
 import { MAX_PROJECT_BYTES, ProjectFileError, createProjectFileName, parseProject, serializeProject } from "./features/project/projectFile";
 import { HistoryPanel } from "./components/history/HistoryPanel";
@@ -86,7 +91,7 @@ function App() {
   const { deck, project, timeline, cursor, jumpTo, setProject, setDeck, setActive, replaceDeck, undo, redo, canUndo, canRedo } = useProjectHistory(() => createDeck(1080, 1350));
   const [initialTemplates] = useState(initializeTemplates);
   const [templates, setTemplates] = useState(initialTemplates.templates);
-  const [sidebarTab, setSidebarTab] = useState<"layers" | "templates" | "meme" | "gallery" | "shapes" | "text" | "history">("gallery");
+  const [sidebarTab, setSidebarTab] = useState<"layers" | "templates" | "meme" | "gallery" | "shapes" | "text" | "history" | "elements" | "brand">("gallery");
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isStyleSheetOpen, setIsStyleSheetOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(initialTemplates.error);
@@ -102,6 +107,7 @@ function App() {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isSizeOpen, setIsSizeOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
+  const [brandKit, setBrandKit] = useState<BrandKit>(loadBrandKit);
   const projectInputRef = useRef<HTMLInputElement>(null);
   const [aiStatus, setAiStatus] = useState<string | null>(null);
   const aiConfirmed = useRef(false);
@@ -256,6 +262,35 @@ function App() {
     }
   }
 
+  // QR·차트처럼 앱이 만든 그림을 이미지 레이어로 추가한다(캔버스 폭의 55% 안에 비율 유지, 가운데).
+  function handleAddGeneratedImage(src: string, name: string, aspect: number) {
+    const width = Math.round(Math.min(project.width * 0.55, project.height * 0.6 * aspect));
+    const height = Math.round(width / aspect);
+    addLayers([{
+      id: crypto.randomUUID(), type: "image", src, name,
+      x: Math.round((project.width - width) / 2), y: Math.round((project.height - height) / 2), width, height,
+      rotation: 0, zIndex: 0, visible: true, locked: false,
+    }]);
+    setErrorMessage(null);
+    setStatusMessage(`"${name}"을 추가했습니다. 끌어서 위치와 크기를 바꿔 보세요.`);
+    setIsMobileSidebarOpen(false);
+  }
+
+  function handleBrandChange(next: BrandKit) {
+    setBrandKit(next);
+    saveBrandKit(next);
+  }
+
+  function handleApplyBrandColor(color: string, target: "layer" | "background") {
+    if (target === "layer" && selectedLayer?.type === "text") updateLayer(selectedLayer.id, { color, fillGradient: undefined });
+    else if (target === "layer" && selectedLayer?.type === "shape") updateLayer(selectedLayer.id, { fillColor: color, fillGradient: undefined });
+    else setProject((current) => ({ ...current, backgroundColor: color, backgroundGradient: undefined, updatedAt: new Date().toISOString() }));
+  }
+
+  function handleApplyBrandFont(fontFamily: string) {
+    if (selectedLayer?.type === "text") updateLayer(selectedLayer.id, { fontFamily });
+  }
+
   function handleAddUserSticker(stickerId: string) {
     const sticker = userStickers.find((s) => s.id === stickerId);
     if (!sticker) return;
@@ -391,6 +426,11 @@ function App() {
       arrow: { width: Math.round(base * 1.3), height: Math.round(base * 0.8) },
       bolt: { width: Math.round(base * 0.7), height: Math.round(base * 1.0) },
       bookmark: { width: Math.round(base * 0.6), height: Math.round(base * 1.0) },
+      diamond: { width: base, height: base },
+      cloud: { width: Math.round(base * 1.3), height: Math.round(base * 0.9) },
+      check: { width: base, height: base },
+      plus: { width: base, height: base },
+      ribbon: { width: Math.round(base * 1.5), height: Math.round(base * 0.6) },
     };
     const { width, height } = sizes[kind];
     const label = SHAPE_OPTIONS.find((option) => option.kind === kind)?.label ?? "도형";
@@ -907,7 +947,7 @@ function App() {
         id: `meme-${presetId}`, group: "밈", label: `밈 자막: ${{ classic: "클래식 상·하단", center: "중앙 한 줄", subtitle: "영화 자막", bubble: "말풍선 대사", breaking: "속보 뉴스" }[presetId]}`,
         keywords: "meme 자막", run: () => handleApplyMemePreset(presetId),
       })),
-      ...(([["gallery", "갤러리"], ["shapes", "도형"], ["meme", "밈·스티커"], ["templates", "내 템플릿"], ["layers", "레이어"], ["history", "작업 이력"]]) as const).map(([tab, name]): Command => ({
+      ...(([["gallery", "갤러리"], ["shapes", "도형"], ["elements", "요소(QR·차트)"], ["brand", "브랜드 키트"], ["meme", "밈·스티커"], ["templates", "내 템플릿"], ["layers", "레이어"], ["history", "작업 이력"]]) as const).map(([tab, name]): Command => ({
         id: `tab-${tab}`, group: "패널", label: `${name} 패널 열기`, keywords: "panel tab", run: () => { setSidebarTab(tab); setIsMobileSidebarOpen(true); },
       })),
       ...RATIO_PRESETS.map((preset): Command => ({
@@ -967,7 +1007,7 @@ function App() {
     }
   }
 
-  function openTab(tab: "layers" | "templates" | "meme" | "gallery" | "shapes" | "text" | "history") {
+  function openTab(tab: "layers" | "templates" | "meme" | "gallery" | "shapes" | "text" | "history" | "elements" | "brand") {
     setIsStyleSheetOpen(false);
     setIsMobileSidebarOpen(sidebarTab === tab ? !isMobileSidebarOpen : true);
     setSidebarTab(tab);
@@ -977,6 +1017,8 @@ function App() {
     { id: "text", icon: "T", label: "텍스트" },
     { id: "gallery", icon: "▦", label: "갤러리" },
     { id: "shapes", icon: "◆", label: "도형" },
+    { id: "elements", icon: "▣", label: "요소" },
+    { id: "brand", icon: "🎨", label: "브랜드" },
     { id: "meme", icon: "😂", label: "밈" },
     { id: "templates", icon: "★", label: "내 템플릿" },
     { id: "layers", icon: "☰", label: "레이어" },
@@ -1050,6 +1092,8 @@ function App() {
           {sidebarTab === "history" && <HistoryPanel timeline={timeline} cursor={cursor} onJump={jumpTo} />}
           {sidebarTab === "text" && <TextPanel onAdd={handleAddTextPreset} onAddPlain={handleAddText} />}
           {sidebarTab === "shapes" && <ShapePanel onAddShape={handleAddShape} onAddOverlay={handleAddOverlay} />}
+          {sidebarTab === "elements" && <ElementsPanel brandColors={brandKit.colors} fontFamily={brandKit.fontFamily ?? "IBM Plex Sans KR"} onAddImage={handleAddGeneratedImage} />}
+          {sidebarTab === "brand" && <BrandPanel kit={brandKit} fonts={FONT_OPTIONS} selectedKind={selectedLayer?.type ?? null} selectedImageSrc={selectedLayer?.type === "image" ? selectedLayer.src : null} onChange={handleBrandChange} onApplyColor={handleApplyBrandColor} onApplyFont={handleApplyBrandFont} />}
           {sidebarTab === "gallery" && <GalleryPanel onApply={handleApplyGalleryTemplate} />}
           {sidebarTab === "meme" && <MemePanel onApplyPreset={handleApplyMemePreset} onAddSticker={handleAddSticker} userStickers={userStickers} onUploadSticker={handleUploadSticker} onAddUserSticker={handleAddUserSticker} onDeleteUserSticker={handleDeleteUserSticker} onAddStickerPackItem={handleAddStickerPackItem} />}
           {sidebarTab === "layers" && (

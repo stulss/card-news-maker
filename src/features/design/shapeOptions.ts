@@ -14,4 +14,9 @@ export const SHAPE_OPTIONS: Array<{ kind: ShapeKind; label: string; icon?: strin
   { kind: "arrow", label: "화살표" },
   { kind: "bolt", label: "번개" },
   { kind: "bookmark", label: "북마크" },
+  { kind: "diamond", label: "마름모" },
+  { kind: "cloud", label: "구름" },
+  { kind: "check", label: "체크" },
+  { kind: "plus", label: "더하기" },
+  { kind: "ribbon", label: "리본" },
 ];

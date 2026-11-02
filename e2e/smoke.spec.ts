@@ -31,3 +31,17 @@ test("보안 헤더와 법적 페이지", async ({ request }) => {
     expect((await request.get(path)).status(), path).toBe(200);
   }
 });
+
+test("요소 탭: QR 코드를 추가하고 브랜드 색이 새로고침 뒤에도 남는다", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "요소" }).first().click();
+  await page.getByLabel("QR 주소 또는 문구").fill("https://example.com");
+  await page.getByRole("button", { name: "QR 코드 추가" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "QR 코드" })).toBeVisible();
+
+  await page.getByRole("button", { name: "브랜드" }).first().click();
+  await page.getByRole("button", { name: "색 추가" }).click();
+  await page.reload();
+  await page.getByRole("button", { name: "브랜드" }).first().click();
+  await expect(page.getByRole("button", { name: /^#[0-9a-f]{6} 적용$/ })).toHaveCount(1);
+});

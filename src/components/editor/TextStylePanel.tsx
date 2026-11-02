@@ -1,3 +1,4 @@
+import { FONT_OPTIONS } from "../../features/design/fontOptions";
 import type { TextLayer } from "../../types/canvas";
 import { PanelSection } from "./PanelSection";
 import { GradientEditor } from "./DesignControls";
@@ -10,11 +11,6 @@ interface Props {
 }
 
 // 웹폰트는 index.html의 Google Fonts(모두 SIL OFL)에서 불러온다. 캔버스 쪽 로딩은 CanvasStage의 fontKey 효과가 맡는다.
-const FONT_OPTIONS = [
-  "IBM Plex Sans KR", "Noto Sans KR", "Noto Serif KR", "Gowun Batang",
-  "Black Han Sans", "Jua", "Do Hyeon", "Gaegu", "Nanum Pen Script",
-  "Malgun Gothic", "Arial", "Georgia",
-];
 
 export function TextStylePanel({ layer, onChange }: Props) {
   return (

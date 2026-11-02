@@ -106,7 +106,7 @@ export interface StickerLayer extends BaseLayer {
 
 export interface ShapeLayer extends BaseLayer {
   type: "shape";
-  shapeType: "rectangle" | "circle" | "star" | "triangle" | "heart" | "bubble" | "arrow" | "bolt" | "bookmark" | "speechBubble";
+  shapeType: "rectangle" | "circle" | "star" | "triangle" | "heart" | "bubble" | "arrow" | "bolt" | "bookmark" | "speechBubble" | "diamond" | "cloud" | "check" | "plus" | "ribbon";
   fillColor: string;
   fillGradient?: GradientFill; // 있으면 fillColor 대신 사용
   strokeColor?: string;

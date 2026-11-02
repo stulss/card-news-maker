@@ -132,12 +132,121 @@ function createSlideSets(): GalleryTemplate[] {
   return [
     makeSlideSet("set-news-5", "캐러셀 5장 세트 · 다크", { bg: "#101828", ink: "#ffffff", sub: "#a5b4fc", accent: "#a78bfa", gradient: preset("미드나잇") }, 3, "오늘의 이슈"),
     makeSlideSet("set-tips-6", "캐러셀 6장 세트 · 라이트", { bg: "#f7f3ea", ink: "#24211d", sub: "#8a8478", accent: "#e8590c", gradient: { from: "#fff7ed", to: "#fde68a", angle: 150 } }, 4, "꿀팁 모음"),
+    makeSlideSet("set-pastel-5", "캐러셀 5장 세트 · 파스텔", { bg: "#fdf2f8", ink: "#4a044e", sub: "#a855f7", accent: "#ec4899", gradient: preset("코튼캔디") }, 3, "오늘의 정보"),
+  ];
+}
+
+/** 카드뉴스·공지·SNS·밈에서 자주 쓰는 구성(비교·단계·Q&A·체크·일정·가격표·티어표)을 더한 템플릿. 모두 직접 만든 도형·문구로 구성했다. */
+function createExtraTemplates(): GalleryTemplate[] {
+  const shadow = { offsetX: 0, offsetY: 14, blur: 34, color: "rgba(0, 0, 0, 0.18)" };
+  const steps = ["첫 번째 할 일을 적어 주세요", "두 번째 할 일을 적어 주세요", "세 번째 할 일을 적어 주세요"];
+  const checks = ["확인할 내용 하나", "확인할 내용 둘", "확인할 내용 셋", "확인할 내용 넷"];
+  const events = [["00.00", "첫 번째 일정"], ["00.00", "두 번째 일정"], ["00.00", "세 번째 일정"]];
+  const prices = [["대표 메뉴", "00,000원"], ["인기 메뉴", "00,000원"], ["시즌 메뉴", "00,000원"], ["사이드", "0,000원"]];
+  const tiers: Array<[string, string]> = [["S", "#ef4444"], ["A", "#f59e0b"], ["B", "#eab308"], ["C", "#22c55e"]];
+
+  return [
+    make("news-compare", "비교 카드 A vs B", "카드뉴스", 1080, 1350, "#f1f5f9", [
+      text("제목", "무엇이 더 나을까?", { x: 80, y: 90, width: 920, height: 130 }, { fontSize: 88, color: "#0f172a" }),
+      box("A 카드", { x: 70, y: 280, width: 440, height: 860 }, "#ffffff", { cornerRadius: 40, shadow }),
+      box("B 카드", { x: 570, y: 280, width: 440, height: 860 }, "#0f172a", { cornerRadius: 40, shadow }),
+      text("A 이름", "A", { x: 70, y: 330, width: 440, height: 160 }, { fontSize: 150, color: "#7c3aed" }),
+      text("A 설명", "장점과 특징을\n짧게 적어 주세요", { x: 110, y: 560, width: 360, height: 360 }, { fontSize: 46, bold: false, color: "#334155", lineHeight: 1.5 }),
+      text("B 이름", "B", { x: 570, y: 330, width: 440, height: 160 }, { fontSize: 150, color: "#f472b6" }),
+      text("B 설명", "장점과 특징을\n짧게 적어 주세요", { x: 610, y: 560, width: 360, height: 360 }, { fontSize: 46, bold: false, color: "#e2e8f0", lineHeight: 1.5 }),
+      shape("VS", "circle", { x: 470, y: 600, width: 140, height: 140 }, "#f59e0b", { shadow }),
+      text("VS 글자", "VS", { x: 470, y: 640, width: 140, height: 70 }, { fontSize: 56, color: "#ffffff" }),
+      text("결론", "결론: 상황에 따라 골라요", { x: 80, y: 1190, width: 920, height: 80 }, { fontSize: 46, bold: false, color: "#475569" }),
+    ]),
+    make("news-steps", "3단계 방법", "카드뉴스", 1080, 1350, "#fff7ed", [
+      text("제목", "이렇게 해보세요", { x: 80, y: 100, width: 920, height: 130 }, { fontSize: 96, align: "left", color: "#7c2d12" }),
+      box("연결선", { x: 156, y: 390, width: 8, height: 640 }, "#fdba74"),
+      ...steps.flatMap((step, i) => [
+        shape(`단계 ${i + 1} 원`, "circle", { x: 100, y: 330 + i * 300, width: 120, height: 120 }, "#ea580c", { shadow }),
+        text(`단계 ${i + 1} 번호`, String(i + 1), { x: 100, y: 352 + i * 300, width: 120, height: 80 }, { fontSize: 72 }),
+        text(`단계 ${i + 1} 내용`, step, { x: 270, y: 330 + i * 300, width: 710, height: 140 }, { fontSize: 54, align: "left", bold: false, color: "#431407", lineHeight: 1.35 }),
+      ]),
+    ]),
+    make("news-qna", "Q&A 카드", "카드뉴스", 1080, 1350, "#eef2ff", [
+      shape("Q 말풍선", "bubble", { x: 70, y: 120, width: 760, height: 460 }, "#4f46e5", { shadow }),
+      text("Q", "Q.", { x: 120, y: 160, width: 200, height: 120 }, { fontSize: 100, align: "left" }),
+      text("질문", "궁금한 질문을\n여기에 적어 주세요", { x: 120, y: 290, width: 660, height: 220 }, { fontSize: 58, align: "left", lineHeight: 1.3 }),
+      box("A 카드", { x: 190, y: 700, width: 820, height: 520 }, "#ffffff", { cornerRadius: 44, shadow }),
+      text("A", "A.", { x: 240, y: 740, width: 200, height: 120 }, { fontSize: 100, align: "left", color: "#ec4899" }),
+      text("답변", "답변을 두세 줄로\n쉽게 풀어 주세요.", { x: 240, y: 880, width: 720, height: 280 }, { fontSize: 54, align: "left", bold: false, color: "#1e1b4b", lineHeight: 1.45 }),
+    ]),
+    make("news-checkpoints", "체크 포인트", "카드뉴스", 1080, 1350, "#0f172a", [
+      text("제목", "이것만 확인하세요", { x: 80, y: 110, width: 920, height: 130 }, { fontSize: 92, align: "left" }),
+      box("구분선", { x: 80, y: 270, width: 140, height: 12 }, "#34d399"),
+      ...checks.flatMap((item, i) => [
+        shape(`체크 ${i + 1}`, "check", { x: 80, y: 360 + i * 210, width: 90, height: 90 }, "#34d399"),
+        text(`항목 ${i + 1}`, item, { x: 210, y: 372 + i * 210, width: 770, height: 80 }, { fontSize: 56, align: "left", bold: false, color: "#e2e8f0" }),
+      ]),
+    ]),
+    make("news-timeline", "타임라인", "카드뉴스", 1080, 1350, "#fdf4ff", [
+      text("제목", "한눈에 보는 흐름", { x: 80, y: 100, width: 920, height: 130 }, { fontSize: 92, align: "left", color: "#581c87" }),
+      box("세로선", { x: 236, y: 330, width: 8, height: 740 }, "#d8b4fe"),
+      ...events.flatMap(([date, label], i) => [
+        shape(`점 ${i + 1}`, "circle", { x: 210, y: 330 + i * 300, width: 60, height: 60 }, "#a855f7"),
+        text(`날짜 ${i + 1}`, date, { x: 330, y: 316 + i * 300, width: 600, height: 80 }, { fontSize: 60, align: "left", color: "#7e22ce" }),
+        text(`내용 ${i + 1}`, label, { x: 330, y: 406 + i * 300, width: 650, height: 90 }, { fontSize: 50, align: "left", bold: false, color: "#3b0764" }),
+      ]),
+    ]),
+    make("notice-schedule", "일정 안내", "공지", 1080, 1350, "#ecfeff", [
+      shape("리본", "ribbon", { x: 60, y: 120, width: 960, height: 200 }, "#0891b2", { shadow }),
+      text("제목", "일정 안내", { x: 60, y: 168, width: 960, height: 110 }, { fontSize: 100 }),
+      ...events.flatMap(([date, label], i) => [
+        box(`카드 ${i + 1}`, { x: 80, y: 420 + i * 240, width: 920, height: 190 }, "#ffffff", { cornerRadius: 36, shadow }),
+        text(`날짜 ${i + 1}`, date, { x: 120, y: 470 + i * 240, width: 300, height: 90 }, { fontSize: 72, align: "left", color: "#0e7490" }),
+        text(`일정 ${i + 1}`, label, { x: 440, y: 480 + i * 240, width: 520, height: 80 }, { fontSize: 52, align: "left", bold: false, color: "#164e63" }),
+      ]),
+      text("문의", "문의: @my_account", { x: 80, y: 1200, width: 920, height: 70 }, { fontSize: 42, bold: false, color: "#155e75" }),
+    ]),
+    make("notice-price", "가격표", "공지", 1080, 1350, "#fffbeb", [
+      text("제목", "MENU", { x: 80, y: 100, width: 920, height: 190 }, { fontSize: 170, color: "#78350f", letterSpacing: 6 }),
+      box("구분선", { x: 440, y: 310, width: 200, height: 8 }, "#d97706"),
+      ...prices.flatMap(([name, price], i) => [
+        text(`메뉴 ${i + 1}`, name, { x: 110, y: 400 + i * 190, width: 480, height: 90 }, { fontSize: 62, align: "left", color: "#451a03" }),
+        text(`가격 ${i + 1}`, price, { x: 600, y: 400 + i * 190, width: 370, height: 90 }, { fontSize: 62, align: "right", color: "#b45309" }),
+        box(`점선 ${i + 1}`, { x: 110, y: 510 + i * 190, width: 860, height: 4 }, "#fcd34d"),
+      ]),
+    ]),
+    make("sns-cloud", "구름 한마디", "SNS", 1080, 1350, "#bae6fd", [
+      shape("구름 1", "cloud", { x: 60, y: 130, width: 420, height: 290 }, "#ffffff", { opacity: 0.9 }),
+      shape("구름 2", "cloud", { x: 640, y: 330, width: 360, height: 250 }, "#ffffff", { opacity: 0.8 }),
+      shape("구름 3", "cloud", { x: 160, y: 1000, width: 520, height: 350 }, "#ffffff", { opacity: 0.85 }),
+      text("문구", "천천히 가도\n괜찮아요", { x: 90, y: 560, width: 900, height: 360 }, { fontSize: 120, color: "#0c4a6e", lineHeight: 1.25 }),
+    ], preset("스카이")),
+    make("sns-intro", "자기소개 카드", "SNS", 1080, 1350, "#fdf2f8", [
+      shape("프로필 원", "circle", { x: 340, y: 110, width: 400, height: 400 }, "#f9a8d4", { strokeColor: "#ffffff", strokeWidth: 14, shadow }),
+      text("프로필 안내", "사진을 올려\n이 원 위에 놓아 보세요", { x: 340, y: 250, width: 400, height: 140 }, { fontSize: 32, bold: false, color: "#9d174d" }),
+      text("이름", "안녕하세요,\n저는 OOO입니다", { x: 80, y: 570, width: 920, height: 260 }, { fontSize: 96, color: "#831843", lineHeight: 1.25 }),
+      ...["하는 일", "좋아하는 것", "요즘 관심사"].flatMap((tag, i) => [
+        shape(`태그 ${i + 1}`, "rectangle", { x: 80 + i * 310, y: 900, width: 290, height: 90 }, "#ec4899", { cornerRadius: 45 }),
+        text(`태그 글자 ${i + 1}`, tag, { x: 80 + i * 310, y: 918, width: 290, height: 56 }, { fontSize: 38 }),
+      ]),
+      text("한줄", "한 줄로 나를 소개해 보세요", { x: 80, y: 1060, width: 920, height: 90 }, { fontSize: 46, bold: false, color: "#9d174d" }),
+    ]),
+    make("sns-link", "링크 안내 (QR 자리)", "SNS", 1080, 1350, "#1e1b4b", [
+      text("제목", "지금 바로\n확인하세요", { x: 80, y: 130, width: 920, height: 330 }, { fontSize: 120, lineHeight: 1.2 }),
+      box("QR 자리", { x: 320, y: 560, width: 440, height: 440 }, "#ffffff", { cornerRadius: 36, shadow }),
+      text("QR 안내", "‘요소’ 탭에서 만든\nQR 코드를 이 위에 놓으세요", { x: 320, y: 730, width: 440, height: 110 }, { fontSize: 30, bold: false, color: "#4338ca" }),
+      text("스캔", "카메라로 스캔해 주세요", { x: 80, y: 1080, width: 920, height: 80 }, { fontSize: 48, bold: false, color: "#c7d2fe" }),
+    ], preset("미드나잇")),
+    make("meme-tier", "티어표 밈", "밈", 1080, 1080, "#111827", [
+      text("제목", "내 맘대로 티어표", { x: 40, y: 30, width: 1000, height: 110 }, { fontSize: 84 }),
+      ...tiers.flatMap(([tier, color], i) => [
+        box(`${tier} 줄`, { x: 40, y: 170 + i * 220, width: 1000, height: 200 }, "#1f2937", { cornerRadius: 16 }),
+        box(`${tier} 라벨`, { x: 40, y: 170 + i * 220, width: 200, height: 200 }, color, { cornerRadius: 16 }),
+        text(`${tier} 글자`, tier, { x: 40, y: 215 + i * 220, width: 200, height: 120 }, { fontSize: 120, color: "#111827" }),
+      ]),
+    ]),
   ];
 }
 
 /** 갤러리 템플릿은 코드에서 매번 새 id로 만들어 적용 시 원본이 오염되지 않게 한다. */
 export function createGalleryTemplates(): GalleryTemplate[] {
-  return [...createSlideSets(), ...createDesignTemplates(), ...createSingleTemplates()];
+  return [...createSlideSets(), ...createDesignTemplates(), ...createSingleTemplates(), ...createExtraTemplates()];
 }
 
 function createSingleTemplates(): GalleryTemplate[] {

@@ -1,7 +1,7 @@
 {
   "name": "card-news-maker",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -27,6 +27,7 @@
     "@fontsource/noto-serif-kr": "^5.3.1",
     "@huggingface/transformers": "^4.3.2",
     "konva": "^10.3.1",
+    "qrcode-generator": "^1.4.4",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-konva": "^19.2.5",

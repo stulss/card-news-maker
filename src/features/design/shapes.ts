@@ -5,6 +5,11 @@ export const PATH_SHAPES = {
   arrow: "M4 36 H58 V14 L96 50 L58 86 V64 H4 Z",
   bolt: "M60 4 L14 56 H44 L36 96 L86 40 H54 Z",
   bookmark: "M20 4 H80 V96 L50 72 L20 96 Z",
+  diamond: "M50 2 L98 50 L50 98 L2 50 Z",
+  cloud: "M26 80 C8 80 2 62 12 52 C6 38 20 26 34 32 C38 14 62 10 70 26 C86 20 100 36 92 52 C102 62 94 80 76 80 Z",
+  check: "M8 54 L22 40 L40 58 L78 14 L92 28 L40 86 Z",
+  plus: "M38 6 H62 V38 H94 V62 H62 V94 H38 V62 H6 V38 H38 Z",
+  ribbon: "M2 18 H98 L86 50 L98 82 H2 L14 50 Z",
 } as const;
 
 export type PathShapeType = keyof typeof PATH_SHAPES;
@@ -14,6 +19,7 @@ export const isPathShape = (shapeType: string): shapeType is PathShapeType => sh
 export const SHAPE_LABELS: Record<string, string> = {
   rectangle: "사각형", circle: "원", star: "별", triangle: "삼각형",
   heart: "하트", bubble: "말풍선", arrow: "화살표", bolt: "번개", bookmark: "북마크",
+  diamond: "마름모", cloud: "구름", check: "체크", plus: "더하기", ribbon: "리본",
 };
 
 /** 썸네일(CSS)에서 별·삼각형을 그리는 clip-path */
