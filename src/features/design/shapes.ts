@@ -18,6 +18,28 @@ export const SHAPE_LABELS: Record<string, string> = {
 
 /** 썸네일(CSS)에서 별·삼각형을 그리는 clip-path */
 export const CLIP_PATHS: Record<string, string> = {
+  hexagon: "polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0% 50%)",
   triangle: "polygon(50% 0%, 100% 100%, 0% 100%)",
   star: "polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)",
 };
+
+/** 이미지 오리기(마스크)용 100×100 경로. 원은 타원으로 늘어난다. */
+export const MASK_PATHS = {
+  circle: "M50 0 A50 50 0 1 1 50 100 A50 50 0 1 1 50 0 Z",
+  star: "M50 0 L61 35 L98 35 L68 57 L79 91 L50 70 L21 91 L32 57 L2 35 L39 35 Z",
+  triangle: "M50 0 L100 100 L0 100 Z",
+  hexagon: "M25 3 L75 3 L100 50 L75 97 L25 97 L0 50 Z",
+  heart: PATH_SHAPES.heart,
+  bubble: PATH_SHAPES.bubble,
+} as const;
+
+export type MaskShape = keyof typeof MASK_PATHS;
+
+export const MASK_OPTIONS: Array<{ shape: MaskShape; label: string }> = [
+  { shape: "circle", label: "원형" },
+  { shape: "star", label: "별" },
+  { shape: "triangle", label: "삼각형" },
+  { shape: "hexagon", label: "육각형" },
+  { shape: "heart", label: "하트" },
+  { shape: "bubble", label: "말풍선" },
+];

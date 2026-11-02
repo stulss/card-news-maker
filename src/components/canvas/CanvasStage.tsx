@@ -353,7 +353,7 @@ export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasS
               }
               if (layer.type === "text") {
                 return <KonvaText ref={rememberNode(layer.id)} key={layer.id} x={layer.x} y={layer.y} width={layer.width} height={layer.height}
-                  text={layer.text} fontSize={layer.fontSize} fontFamily={layer.fontFamily} fill={layer.color} align={layer.align}
+                  text={layer.text} fontSize={layer.fontSize} fontFamily={layer.fontFamily} {...(layer.fillGradient ? konvaGradient(layer.fillGradient, layer.width, layer.height) : { fill: layer.color })} align={layer.align}
                   fontStyle={[layer.bold ? "bold" : "", layer.italic ? "italic" : ""].filter(Boolean).join(" ") || "normal"}
                   lineHeight={layer.lineHeight} letterSpacing={layer.letterSpacing} rotation={layer.rotation} visible={layer.visible} opacity={layer.opacity ?? 1}
                   globalCompositeOperation={layer.blendMode ?? "source-over"}

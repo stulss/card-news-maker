@@ -2,16 +2,19 @@ import { useState } from "react";
 import { PATH_SHAPES, isPathShape } from "../../features/design/shapes";
 import { SHAPE_OPTIONS } from "../../features/design/shapeOptions";
 import type { ShapeKind } from "../../features/design/shapeOptions";
+import { OVERLAY_OPTIONS } from "../../features/design/overlays";
+import type { OverlayKind } from "../../features/design/overlays";
 
 export type { ShapeKind };
 
 interface Props {
   onAddShape: (kind: ShapeKind, fillColor: string, gradient: boolean) => void;
+  onAddOverlay: (kind: OverlayKind) => void;
 }
 
 const SWATCHES = ["#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#38bdf8", "#ffffff", "#111827"];
 
-export function ShapePanel({ onAddShape }: Props) {
+export function ShapePanel({ onAddShape, onAddOverlay }: Props) {
   const [color, setColor] = useState(SWATCHES[0]);
   const [gradient, setGradient] = useState(false);
   return (
@@ -34,6 +37,16 @@ export function ShapePanel({ onAddShape }: Props) {
               ? <svg className="shape-icon" viewBox="0 0 100 100" aria-hidden="true"><path d={PATH_SHAPES[shape.kind]} fill={color} /></svg>
               : <span className="shape-icon" aria-hidden="true" style={{ color }}>{shape.icon}</span>}
             <strong>{shape.label}</strong>
+          </button>
+        ))}
+      </div>
+      <h3 className="side-subtitle">사진 위 글자용 오버레이</h3>
+      <p className="panel-hint">사진 바로 위에 투명→어두움 막을 깔아 글자가 잘 읽히게 해요. 글자는 그 위에 올려 주세요.</p>
+      <div className="shape-grid">
+        {OVERLAY_OPTIONS.map((option) => (
+          <button key={option.kind} type="button" className="preset-card" onClick={() => onAddOverlay(option.kind)} title={option.hint}>
+            <strong>{option.label}</strong>
+            <span>{option.hint}</span>
           </button>
         ))}
       </div>

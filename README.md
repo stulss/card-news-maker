@@ -15,9 +15,10 @@
 | 파일 | 용도 |
 |---|---|
 | `작업내역_체크리스트.md` | **진행 상황·결정 기록·작업 로그.** AI 공용 인수인계 파일이자 단일 진실 공급원 |
+| `docs/10_AI_배경제거와_고급편집.md` | AI 배경 제거·이력 패널·이미지 오리기·스티커 팩 |
 | `docs/09_디자인_가이드.md` | 디자인 시스템·그래픽 도구·구현 메모 |
 | `docs/08_인스타그램_사용가이드.md` | 인스타 규격·작업 순서·업로드 방법·한계 |
-| `PRD.md` | 개발요청서 48장. 기능 요구사항·화면 설계·데이터 구조(43·44장 야구/백엔드는 폐기, 45장이 2차 기능) |
+| `PRD.md` | 개발요청서 49장(48-1·48-2 포함). 기능 요구사항·화면 설계·데이터 구조(43·44장 야구/백엔드는 폐기, 45장이 2차 기능) |
 | `CLAUDE.md` | AI가 폴더를 통째로 읽지 않도록 하는 토큰 절약 규칙 |
 | `AGENTS.md` / `GEMINI.md` | Codex·Antigravity 프로젝트 진입 지침 |
 | `docs/01_기획.md` | 구현된 아키텍처·기술 선택 요약 |
@@ -54,7 +55,7 @@
 
 ```text
 card-news-maker/
-├── PRD.md                       # 개발요청서 48장
+├── PRD.md                       # 개발요청서 49장
 ├── CLAUDE.md                    # AI 작업 규칙
 ├── AGENTS.md / GEMINI.md        # Codex / Antigravity 진입 지침
 ├── README.md
@@ -72,6 +73,8 @@ card-news-maker/
     ├── components/editor/       # PropertiesPanel(공통 투명도·이미지 보정), TextStylePanel
     ├── components/layer/        # LayerPanel
     ├── components/template/     # TemplatePanel(내 템플릿), GalleryPanel(갤러리)(내 템플릿), GalleryPanel(갤러리)
+    ├── components/history/      # HistoryPanel — 작업 이력
+    ├── components/size/         # SizeDialog — 캔버스 크기 프리셋·직접 입력
     ├── components/welcome/      # WelcomeCard — 빈 작업 시작 카드
     ├── components/text/         # TextPanel — 텍스트 스타일 프리셋
     ├── components/slides/       # SlideStrip — 슬라이드 목록
@@ -82,6 +85,7 @@ card-news-maker/
     ├── components/help/         # ShortcutHelp — 단축키 도움말
     ├── components/meme/         # MemePanel — 자막 프리셋·이모지 스티커
     ├── features/design/         # gradients·shapes·textPresets — 그래픽 도구 모듈
+    ├── features/ai/             # removeBackground — 브라우저 내 AI 배경 제거
     ├── features/deck/           # Deck(슬라이드 묶음)·복제·크기 동기화
     ├── features/autosave/       # deckStore — IndexedDB 자동 저장·복원
     ├── features/export/         # exportImage(워터마크·페이지 번호), zip, downloadCanvas
@@ -135,6 +139,13 @@ card-news-maker/
 | 구도 격자 | Shift+G — 3분할 / 12분할 격자 / 황금비 / 대각선(내보내기 제외) |
 | 레이어 | 이름 더블클릭으로 바꾸기, 다중 선택 후 가로·세로 분포 |
 | 로고 워터마크 | 내보내기에서 글자 또는 로고 이미지 워터마크 |
+| 캔버스 크기 | ⤢ 버튼 — 인스타그램·유튜브·X·페이스북·핀터레스트 프리셋 + 직접 입력(100~4000px) |
+| 사진 위 오버레이 | 도형 탭 — 하단·상단 어둡게, 전체 어둡게, 원형 비네팅(글자 가독성) |
+| 작업 이력 | `기록` 탭 — 되돌리기 단계 목록, 클릭으로 점프 |
+| 텍스트 그라디언트 | 글자 색을 그라디언트로(두 색·각도·원형·불투명도) |
+| 이미지 모양 오리기 | 원형·별·삼각형·육각형·하트·말풍선 |
+| 스티커 팩 | 배지·말풍선·강조·장식 22종(그룹) |
+| AI 배경 제거 | 사람 사진의 배경을 브라우저 안에서 지움(처음 한 번 모델 약 25MB 내려받기) |
 | 시작 카드 | 빈 작업에서 크기·세트·갤러리로 바로 시작 |
 | 단축키 | Ctrl+D 복제, Delete 삭제, 방향키 1px(Shift 10px) 이동, Esc 선택 해제 |
 
@@ -143,3 +154,13 @@ card-news-maker/
 - **수익화 전부** (광고·결제·구독·프리미엄 잠금) — 과제 범위에서 영구 제외. `PRD.md` 40장은 기록용으로만 남긴다.
 - 회원가입·로그인·클라우드 저장·협업 편집 — `PRD.md` 42장 "절대 먼저 만들지 말아야 할 기능"
 - 동영상·GIF 편집, 고급 사진 보정, 템플릿 마켓 — `PRD.md` 11장 초기 제외 범위
+
+## 서드파티
+
+| 구성 | 라이선스 | 용도 |
+|---|---|---|
+| React, Konva, react-konva, use-image | MIT | 편집기·캔버스 |
+| @huggingface/transformers (+ onnxruntime-web) | Apache-2.0 | AI 배경 제거 실행 |
+| Xenova/modnet (MODNet 모델) | Apache-2.0 | AI 배경 제거 모델(처음 사용할 때 내려받음) |
+| 한글 웹폰트 (Noto·고운바탕·주아·도현 등) | SIL OFL | `index.html`의 Google Fonts |
+

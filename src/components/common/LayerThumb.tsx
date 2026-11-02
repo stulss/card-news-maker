@@ -27,7 +27,7 @@ export function LayerThumb({ width, height, backgroundColor, backgroundGradient,
                 {layer.fillGradient && (
                   <defs>
                     <linearGradient id={gradientId} gradientTransform={`rotate(${layer.fillGradient.angle - 90} .5 .5)`}>
-                      <stop offset="0" stopColor={layer.fillGradient.from} /><stop offset="1" stopColor={layer.fillGradient.to} />
+                      <stop offset="0" stopColor={layer.fillGradient.from} stopOpacity={layer.fillGradient.fromOpacity ?? 1} /><stop offset="1" stopColor={layer.fillGradient.to} stopOpacity={layer.fillGradient.toOpacity ?? 1} />
                     </linearGradient>
                   </defs>
                 )}
@@ -41,13 +41,13 @@ export function LayerThumb({ width, height, backgroundColor, backgroundGradient,
         if (layer.type === "text") {
           const justify = layer.align === "left" ? "flex-start" : layer.align === "right" ? "flex-end" : "center";
           return (
-            <div key={layer.id} className="thumb-item" style={{ ...box, justifyContent: justify, textAlign: layer.align, color: layer.color, fontWeight: layer.bold ? 700 : 400, fontStyle: layer.italic ? "italic" : undefined, fontFamily: layer.fontFamily, fontSize: `${(layer.fontSize / width) * 100}cqw`, lineHeight: layer.lineHeight }}>
+            <div key={layer.id} className="thumb-item" style={{ ...box, justifyContent: justify, textAlign: layer.align, color: layer.color, fontWeight: layer.bold ? 700 : 400, fontStyle: layer.italic ? "italic" : undefined, fontFamily: layer.fontFamily, fontSize: `${(layer.fontSize / width) * 100}cqw`, lineHeight: layer.lineHeight, ...(layer.fillGradient ? { backgroundImage: cssGradient(layer.fillGradient), WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" } : {}) }}>
               {layer.text}
             </div>
           );
         }
         if (layer.type === "image") {
-          return <img key={layer.id} className="thumb-item thumb-image" alt="" src={layer.src} style={{ ...box, borderRadius: layer.cornerRadius ? `${(layer.cornerRadius / width) * 100}cqw` : undefined }} />;
+          return <img key={layer.id} className="thumb-item thumb-image" alt="" src={layer.src} style={{ ...box, borderRadius: layer.maskShape === "circle" ? "50%" : layer.cornerRadius ? `${(layer.cornerRadius / width) * 100}cqw` : undefined, clipPath: layer.maskShape ? CLIP_PATHS[layer.maskShape] : undefined }} />;
         }
         return null;
       })}

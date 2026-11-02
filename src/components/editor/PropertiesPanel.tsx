@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { BlendMode, GradientFill, ImageFilters, ImageLayer, Layer, ShapeLayer, TextLayer } from "../../types/canvas";
 import { TextStylePanel } from "./TextStylePanel";
 import { PanelSection } from "./PanelSection";
+import { MASK_OPTIONS } from "../../features/design/shapes";
 import { GradientEditor, ShadowFields } from "./DesignControls";
 
 export type AlignMode = "left" | "hcenter" | "right" | "top" | "vcenter" | "bottom";
@@ -34,6 +35,8 @@ interface Props {
   isCropMode: boolean;
   onToggleCropMode: () => void;
   canPasteStyle: boolean;
+  aiBusy: string | null;
+  onRemoveBackground: () => void;
   onCopyStyle: () => void;
   onPasteStyle: () => void;
   background: { color: string; gradient?: GradientFill };
@@ -168,15 +171,26 @@ function ShapeSection({ layer, onChange }: { layer: ShapeLayer; onChange: Props[
   );
 }
 
-function ImageStyleSection({ layer, onChange }: { layer: ImageLayer; onChange: Props["onChange"] }) {
+function ImageStyleSection({ layer, onChange, aiBusy, onRemoveBackground }: { layer: ImageLayer; onChange: Props["onChange"]; aiBusy: string | null; onRemoveBackground: () => void }) {
   return (
     <PanelSection title="모양" label="이미지 모양">
       <div className="panel-fields">
+        <div className="field-group">
+          <span className="field-label">모양으로 오리기</span>
+          <div className="chip-row" role="group" aria-label="이미지 모양">
+            <button type="button" className={!layer.maskShape ? "active" : ""} aria-pressed={!layer.maskShape} onClick={() => onChange({ maskShape: undefined })}>없음</button>
+            {MASK_OPTIONS.map((option) => (
+              <button key={option.shape} type="button" className={layer.maskShape === option.shape ? "active" : ""} aria-pressed={layer.maskShape === option.shape} onClick={() => onChange({ maskShape: option.shape })}>{option.label}</button>
+            ))}
+          </div>
+        </div>
         <label><span>모서리 둥글기 <output>{layer.cornerRadius ?? 0}</output></span>
           <input type="range" min="0" max="500" value={layer.cornerRadius ?? 0} onChange={(e) => onChange({ cornerRadius: Number(e.target.value) }, "image-radius")} /></label>
         <label><span>테두리</span>
           <div className="color-field"><input type="color" value={layer.borderColor ?? "#ffffff"} onChange={(e) => onChange({ borderColor: e.target.value }, "image-border")} />
             <input type="range" min="0" max="60" value={layer.borderWidth ?? 0} onChange={(e) => onChange({ borderWidth: Number(e.target.value) }, "image-border-w")} aria-label="테두리 두께" /><output>{layer.borderWidth ?? 0}</output></div></label>
+        <button type="button" className="btn ai-btn" disabled={!!aiBusy} onClick={onRemoveBackground}>{aiBusy ?? "✨ AI 배경 제거"}</button>
+        <p className="panel-hint">사람 사진에서 배경을 지워 투명하게 만들어요. 처음 한 번 모델(약 25MB)을 내려받고, 사진은 서버로 보내지 않습니다. Ctrl+Z로 되돌릴 수 있어요.</p>
       </div>
     </PanelSection>
   );
@@ -265,7 +279,7 @@ function ImageAdjustSection({ layer, onChange, onCompareOriginal }: { layer: Ima
   );
 }
 
-export function PropertiesPanel({ layer, canvasSize, isCropMode, onToggleCropMode, canPasteStyle, onCopyStyle, onPasteStyle, background, slideCount, onBackgroundChange, onApplyBackgroundToAll, onCompareOriginal, onAlign, onChange, onDuplicate, onDelete }: Props) {
+export function PropertiesPanel({ layer, canvasSize, isCropMode, onToggleCropMode, canPasteStyle, aiBusy, onRemoveBackground, onCopyStyle, onPasteStyle, background, slideCount, onBackgroundChange, onApplyBackgroundToAll, onCompareOriginal, onAlign, onChange, onDuplicate, onDelete }: Props) {
   if (!layer) {
     return (
       <aside className="properties-panel" aria-label="속성">
@@ -293,7 +307,7 @@ export function PropertiesPanel({ layer, canvasSize, isCropMode, onToggleCropMod
       )}
       {layer.type === "image" && <ImageCropSection layer={layer} canvasSize={canvasSize} isCropMode={isCropMode} onToggleCropMode={onToggleCropMode} onChange={onChange} />}
       {layer.type === "shape" && <ShapeSection layer={layer} onChange={onChange} />}
-      {layer.type === "image" && <ImageStyleSection layer={layer} onChange={onChange} />}
+      {layer.type === "image" && <ImageStyleSection layer={layer} onChange={onChange} aiBusy={aiBusy} onRemoveBackground={onRemoveBackground} />}
       {layer.type === "image" && <ImageAdjustSection key={layer.id} layer={layer} onChange={onChange} onCompareOriginal={onCompareOriginal} />}
 
       <PanelSection title="공통" label="공통 속성">

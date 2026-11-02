@@ -18,6 +18,12 @@ import { SHAPE_OPTIONS } from "./features/design/shapeOptions";
 import type { ShapeKind } from "./features/design/shapeOptions";
 import { TextPanel } from "./components/text/TextPanel";
 import { WelcomeCard } from "./components/welcome/WelcomeCard";
+import { SizeDialog } from "./components/size/SizeDialog";
+import { HistoryPanel } from "./components/history/HistoryPanel";
+import { STICKER_PACKS, instantiateSticker } from "./features/design/stickerPacks";
+import { AI_MODEL_NOTICE, removeBackground } from "./features/ai/removeBackground";
+import { OVERLAY_OPTIONS, buildOverlay } from "./features/design/overlays";
+import type { OverlayKind } from "./features/design/overlays";
 import { createGalleryTemplates } from "./features/template/galleryTemplates";
 import { TEXT_PRESETS } from "./features/design/textPresets";
 import { copyStyle, pasteStyle } from "./features/design/layerStyle";
@@ -72,10 +78,10 @@ function initializeTemplates() {
 }
 
 function App() {
-  const { deck, project, setProject, setDeck, setActive, replaceDeck, undo, redo, canUndo, canRedo } = useProjectHistory(() => createDeck(1080, 1350));
+  const { deck, project, timeline, cursor, jumpTo, setProject, setDeck, setActive, replaceDeck, undo, redo, canUndo, canRedo } = useProjectHistory(() => createDeck(1080, 1350));
   const [initialTemplates] = useState(initializeTemplates);
   const [templates, setTemplates] = useState(initialTemplates.templates);
-  const [sidebarTab, setSidebarTab] = useState<"layers" | "templates" | "meme" | "gallery" | "shapes" | "text">("gallery");
+  const [sidebarTab, setSidebarTab] = useState<"layers" | "templates" | "meme" | "gallery" | "shapes" | "text" | "history">("gallery");
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isStyleSheetOpen, setIsStyleSheetOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(initialTemplates.error);
@@ -89,6 +95,9 @@ function App() {
   const [caption, setCaption] = useState(() => { try { return localStorage.getItem("card-news-caption") ?? ""; } catch { return ""; } });
   const [autosaveReady, setAutosaveReady] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [isSizeOpen, setIsSizeOpen] = useState(false);
+  const [aiStatus, setAiStatus] = useState<string | null>(null);
+  const aiConfirmed = useRef(false);
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [exportSettings, setExportSettings] = useState<ExportSettings>(loadExportSettings);
   const [rulersVisible, setRulersVisible] = useState(false);
@@ -145,7 +154,7 @@ function App() {
       // 명령 팔레트는 입력창에 포커스가 있어도 열리고 닫힌다.
       if (mod && key === "k") { event.preventDefault(); setIsPaletteOpen((open) => !open); return; }
       if (target && (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))) return;
-      if (isExportOpen || isHelpOpen || isPaletteOpen) return; // 창이 열려 있는 동안 캔버스 단축키는 막는다
+      if (isExportOpen || isHelpOpen || isPaletteOpen || isSizeOpen) return; // 창이 열려 있는 동안 캔버스 단축키는 막는다
       if (mod && key === "e") { event.preventDefault(); setIsExportOpen(true); return; }
       if (key === "pageup" || key === "pagedown") { event.preventDefault(); selectSlide(Math.min(deck.slides.length - 1, Math.max(0, deck.active + (key === "pagedown" ? 1 : -1)))); return; }
       if ((mod && key === "/") || event.key === "?") { event.preventDefault(); setIsHelpOpen(true); return; }
@@ -282,6 +291,46 @@ function App() {
   const GRID_LABELS = { off: "끄기", thirds: "3분할", grid: "촘촘한 격자", golden: "황금비", diagonal: "대각선" } as const;
   const nextGrid = GRID_ORDER[(GRID_ORDER.indexOf(gridMode) + 1) % GRID_ORDER.length];
   const cycleGrid = () => setGridMode(nextGrid);
+
+  // 사진 바로 위(가장 위의 이미지 레이어 다음)에 깔아야 그 위의 글자는 그대로 위에 남는다.
+  function handleAddOverlay(kind: OverlayKind) {
+    const overlay = buildOverlay(kind, project);
+    const topImage = project.layers.filter((layer) => layer.type === "image").reduce((max, layer) => Math.max(max, layer.zIndex), -1);
+    const zIndex = topImage >= 0 ? topImage + 0.5 : nextZIndex;
+    setProject((p) => ({ ...p, layers: [...p.layers, { ...overlay, zIndex }], updatedAt: new Date().toISOString() }));
+    setSelectedLayerId(overlay.id);
+    setIsMobileSidebarOpen(false);
+    setStatusMessage(topImage >= 0 ? `"${overlay.name}"을 사진 바로 위에 놓았습니다. 글자는 그 위에 있어요.` : `"${overlay.name}"을 추가했습니다. 사진 위로 순서를 맞춰 주세요.`);
+  }
+
+  function handleAddStickerPackItem(itemId: string) {
+    const item = STICKER_PACKS.flatMap((pack) => pack.items).find((candidate) => candidate.id === itemId);
+    if (!item) return;
+    addLayers(instantiateSticker(item, project, nextZIndex));
+    setIsMobileSidebarOpen(false);
+  }
+
+  // AI 배경 제거: 선택한 이미지의 원본을 배경이 투명한 PNG로 바꾼다(Ctrl+Z로 되돌릴 수 있다). 모델 내려받기 전에 한 번 동의를 받는다.
+  async function handleRemoveBackground() {
+    if (!selectedLayer || selectedLayer.type !== "image" || aiStatus) return;
+    if (!aiConfirmed.current) {
+      if (!window.confirm(AI_MODEL_NOTICE)) return;
+      aiConfirmed.current = true;
+    }
+    const target = selectedLayer;
+    setErrorMessage(null);
+    try {
+      const dataUrl = await removeBackground(target.src, setAiStatus);
+      updateLayer(target.id, { src: dataUrl, maskShape: undefined });
+      setStatusMessage("배경을 지웠습니다. 마음에 들지 않으면 Ctrl+Z로 되돌리세요.");
+    } catch (error) {
+      console.error("Background removal failed", error);
+      aiConfirmed.current = true;
+      setErrorMessage(`AI 배경 제거에 실패했습니다: ${error instanceof Error ? error.message : "알 수 없는 오류"} (네트워크 연결과 브라우저를 확인해 주세요)`);
+    } finally {
+      setAiStatus(null);
+    }
+  }
 
   function handleAddTextPreset(presetId: string) {
     const preset = TEXT_PRESETS.find((candidate) => candidate.id === presetId);
@@ -786,13 +835,15 @@ function App() {
         id: `meme-${presetId}`, group: "밈", label: `밈 자막: ${{ classic: "클래식 상·하단", center: "중앙 한 줄", subtitle: "영화 자막", bubble: "말풍선 대사", breaking: "속보 뉴스" }[presetId]}`,
         keywords: "meme 자막", run: () => handleApplyMemePreset(presetId),
       })),
-      ...(([["gallery", "갤러리"], ["shapes", "도형"], ["meme", "밈·스티커"], ["templates", "내 템플릿"], ["layers", "레이어"]]) as const).map(([tab, name]): Command => ({
+      ...(([["gallery", "갤러리"], ["shapes", "도형"], ["meme", "밈·스티커"], ["templates", "내 템플릿"], ["layers", "레이어"], ["history", "작업 이력"]]) as const).map(([tab, name]): Command => ({
         id: `tab-${tab}`, group: "패널", label: `${name} 패널 열기`, keywords: "panel tab", run: () => { setSidebarTab(tab); setIsMobileSidebarOpen(true); },
       })),
       ...RATIO_PRESETS.map((preset): Command => ({
         id: `ratio-${preset.label}`, group: "캔버스", label: `화면비 ${preset.label}`, keywords: "비율 크기 ratio",
         run: () => handleSetCanvasSize(preset.width, preset.height),
       })),
+      { id: "canvas-size", group: "캔버스", label: "캔버스 크기 설정… (SNS 프리셋·직접 입력)", keywords: "size 크기 사이즈 해상도 가로 세로 유튜브 썸네일 핀터레스트", run: () => setIsSizeOpen(true) },
+      ...OVERLAY_OPTIONS.map((option): Command => ({ id: `overlay-${option.kind}`, group: "오버레이", label: `사진 위 오버레이: ${option.label}`, keywords: "overlay 그라디언트 가독성 글자", run: () => handleAddOverlay(option.kind) })),
       { id: "slide-add", group: "슬라이드", label: "슬라이드 추가", keywords: "carousel 캐러셀 장 페이지", run: handleAddSlide },
       { id: "slide-dup", group: "슬라이드", label: "현재 슬라이드 복제", keywords: "carousel 캐러셀", run: handleDuplicateSlide },
       { id: "slide-del", group: "슬라이드", label: "현재 슬라이드 삭제", keywords: "carousel 캐러셀", run: handleDeleteSlide },
@@ -811,6 +862,7 @@ function App() {
     if (hasSelection) {
       list.push(
         { id: "duplicate", group: "선택 레이어", label: "복제", shortcut: "Ctrl+D", run: handleDuplicateLayer },
+        ...(selectedLayer.type === "image" ? [{ id: "ai-remove-bg", group: "선택 레이어", label: "AI 배경 제거 (사람 사진)", keywords: "ai 배경 제거 누끼 remove background", run: handleRemoveBackground } as Command] : []),
         { id: "copy-style", group: "선택 레이어", label: "스타일 복사", keywords: "style graphic 그래픽 스타일", run: handleCopyStyle },
         ...(styleClipboard ? [{ id: "paste-style", group: "선택 레이어", label: "스타일 붙여넣기", keywords: "style graphic 그래픽 스타일", run: handlePasteStyle } as Command] : []),
         { id: "delete", group: "선택 레이어", label: "삭제", shortcut: "Delete", run: () => handleDeleteLayer(selectedLayer.id) },
@@ -835,7 +887,7 @@ function App() {
     }
   }
 
-  function openTab(tab: "layers" | "templates" | "meme" | "gallery" | "shapes" | "text") {
+  function openTab(tab: "layers" | "templates" | "meme" | "gallery" | "shapes" | "text" | "history") {
     setIsStyleSheetOpen(false);
     setIsMobileSidebarOpen(sidebarTab === tab ? !isMobileSidebarOpen : true);
     setSidebarTab(tab);
@@ -848,6 +900,7 @@ function App() {
     { id: "meme", icon: "😂", label: "밈" },
     { id: "templates", icon: "★", label: "내 템플릿" },
     { id: "layers", icon: "☰", label: "레이어" },
+    { id: "history", icon: "⟲", label: "기록" },
   ] as const;
 
   return (
@@ -873,6 +926,7 @@ function App() {
               );
             })}
           </div>
+          <button type="button" className="btn icon-only" onClick={() => setIsSizeOpen(true)} title="캔버스 크기 (SNS 프리셋·직접 입력)" aria-label="캔버스 크기 설정">⤢</button>
           <label className="bg-picker" title="배경색">
             <input type="color" value={/^#[0-9a-f]{6}$/i.test(project.backgroundColor) ? project.backgroundColor : "#ffffff"}
               onChange={(event) => setProject((p) => ({ ...p, backgroundColor: event.target.value, backgroundGradient: undefined, updatedAt: new Date().toISOString() }), "background")} />
@@ -911,10 +965,11 @@ function App() {
 
         <button type="button" className={`drawer-backdrop ${isMobileSidebarOpen ? "visible" : ""}`} aria-label="패널 닫기" onClick={() => setIsMobileSidebarOpen(false)} />
         <div className={`side-drawer ${isMobileSidebarOpen ? "mobile-open" : ""}`}>
+          {sidebarTab === "history" && <HistoryPanel timeline={timeline} cursor={cursor} onJump={jumpTo} />}
           {sidebarTab === "text" && <TextPanel onAdd={handleAddTextPreset} onAddPlain={handleAddText} />}
-          {sidebarTab === "shapes" && <ShapePanel onAddShape={handleAddShape} />}
+          {sidebarTab === "shapes" && <ShapePanel onAddShape={handleAddShape} onAddOverlay={handleAddOverlay} />}
           {sidebarTab === "gallery" && <GalleryPanel onApply={handleApplyGalleryTemplate} />}
-          {sidebarTab === "meme" && <MemePanel onApplyPreset={handleApplyMemePreset} onAddSticker={handleAddSticker} userStickers={userStickers} onUploadSticker={handleUploadSticker} onAddUserSticker={handleAddUserSticker} onDeleteUserSticker={handleDeleteUserSticker} />}
+          {sidebarTab === "meme" && <MemePanel onApplyPreset={handleApplyMemePreset} onAddSticker={handleAddSticker} userStickers={userStickers} onUploadSticker={handleUploadSticker} onAddUserSticker={handleAddUserSticker} onDeleteUserSticker={handleDeleteUserSticker} onAddStickerPackItem={handleAddStickerPackItem} />}
           {sidebarTab === "layers" && (
             <LayerPanel
               layers={project.layers}
@@ -949,7 +1004,7 @@ function App() {
           rulersVisible={rulersVisible} rulerGuides={rulerGuides} onAddGuide={handleAddGuide} onClearGuides={() => setRulerGuides([])} />
         {isEmptyDeck && (
           <WelcomeCard width={project.width} height={project.height} onSize={handleSetCanvasSize} onUpload={() => fileInputRef.current?.click()}
-            onAddHeadline={() => handleAddTextPreset("headline")} onStartSet={handleStartSet} onOpenGallery={() => { setSidebarTab("gallery"); setIsMobileSidebarOpen(true); }} />
+            onAddHeadline={() => handleAddTextPreset("headline")} onStartSet={handleStartSet} onOpenGallery={() => { setSidebarTab("gallery"); setIsMobileSidebarOpen(true); }} onMoreSizes={() => setIsSizeOpen(true)} />
         )}
         <div className="canvas-hint" aria-hidden="true">{canvasHint}</div>
         {cropLayerId && (
@@ -967,7 +1022,7 @@ function App() {
             <span className="sheet-summary">{selectedLayer ? `속성 · ${selectedLayer.name}` : "레이어를 선택하세요"}</span>
             <span aria-hidden="true">{isStyleSheetOpen ? "⌄" : "⌃"}</span>
           </button>
-          <PropertiesPanel layer={selectedLayer} canPasteStyle={!!styleClipboard} onCopyStyle={handleCopyStyle} onPasteStyle={handlePasteStyle} background={{ color: project.backgroundColor, gradient: project.backgroundGradient }} slideCount={deck.slides.length} onBackgroundChange={handleBackgroundChange} onApplyBackgroundToAll={handleApplyBackgroundToAll} isCropMode={!!cropLayerId} onToggleCropMode={() => setCropTargetId(cropLayerId ? null : selectedLayer?.id ?? null)} onCompareOriginal={setIsComparingOriginal} onAlign={handleAlign} canvasSize={{ width: project.width, height: project.height }} onChange={(changes, key) => { if (selectedLayer) updateLayer(selectedLayer.id, changes, key); }}
+          <PropertiesPanel layer={selectedLayer} aiBusy={aiStatus} onRemoveBackground={handleRemoveBackground} canPasteStyle={!!styleClipboard} onCopyStyle={handleCopyStyle} onPasteStyle={handlePasteStyle} background={{ color: project.backgroundColor, gradient: project.backgroundGradient }} slideCount={deck.slides.length} onBackgroundChange={handleBackgroundChange} onApplyBackgroundToAll={handleApplyBackgroundToAll} isCropMode={!!cropLayerId} onToggleCropMode={() => setCropTargetId(cropLayerId ? null : selectedLayer?.id ?? null)} onCompareOriginal={setIsComparingOriginal} onAlign={handleAlign} canvasSize={{ width: project.width, height: project.height }} onChange={(changes, key) => { if (selectedLayer) updateLayer(selectedLayer.id, changes, key); }}
             onDuplicate={handleDuplicateLayer} onDelete={() => { if (selectedLayer) handleDeleteLayer(selectedLayer.id); }} />
         </div>
       </main>
@@ -982,6 +1037,7 @@ function App() {
           <div className="modal progress-modal"><strong>슬라이드 내보내는 중…</strong><span>{exportProgress.done + 1} / {exportProgress.total}</span><div className="progress-bar"><div style={{ width: `${((exportProgress.done + 1) / exportProgress.total) * 100}%` }} /></div></div>
         </div>
       )}
+      {isSizeOpen && <SizeDialog width={project.width} height={project.height} onApply={handleSetCanvasSize} onClose={() => setIsSizeOpen(false)} />}
       {isHelpOpen && <ShortcutHelp onClose={() => setIsHelpOpen(false)} />}
       {isPaletteOpen && <CommandPalette commands={buildCommands()} onClose={() => setIsPaletteOpen(false)} />}
     </div>

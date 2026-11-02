@@ -20,26 +20,46 @@ export const GRADIENT_PRESETS: GradientPreset[] = [
   { name: "스카이", value: { from: "#e0f2fe", to: "#a5b4fc", angle: 160 } },
 ];
 
-/** CSS `linear-gradient` 문자열(썸네일·미리보기용). 각도 규칙은 CSS와 같다: 0°=아래→위, 90°=왼쪽→오른쪽. */
+/** #rrggbb + 불투명도 → rgba() 문자열(불투명이면 원래 값을 그대로 돌려준다). */
+export function withOpacity(color: string, opacity = 1): string {
+  const match = /^#?([0-9a-f]{6})$/i.exec(color.trim());
+  if (!match || opacity >= 1) return color;
+  const n = Number.parseInt(match[1], 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${Math.max(0, opacity)})`;
+}
+
+/** CSS 그라디언트 문자열(썸네일·미리보기용). 각도 규칙은 CSS와 같다: 0°=아래→위, 90°=왼쪽→오른쪽. */
 export function cssGradient(gradient: GradientFill) {
-  return `linear-gradient(${gradient.angle}deg, ${gradient.from}, ${gradient.to})`;
+  const from = withOpacity(gradient.from, gradient.fromOpacity);
+  const to = withOpacity(gradient.to, gradient.toOpacity);
+  return gradient.type === "radial" ? `radial-gradient(circle at center, ${from}, ${to})` : `linear-gradient(${gradient.angle}deg, ${from}, ${to})`;
 }
 
 /**
- * Konva 노드용 선형 그라디언트 속성. CSS와 같은 각도 규칙을 쓰고, 상자 대각 길이에 맞춰 양 끝이 모서리까지 닿게 한다.
- * centered=true면 노드 좌표 원점이 상자 중심인 도형(원·별·삼각형)용이다.
+ * Konva 노드용 그라디언트 속성. 선형은 CSS와 같은 각도 규칙을 쓰고 상자 대각 길이에 맞춰 양 끝이 모서리까지 닿게 하며,
+ * 원형은 중심에서 모서리까지 퍼진다. centered=true면 노드 좌표 원점이 상자 중심인 도형(원·별·삼각형)용이다.
  */
 export function konvaGradient(gradient: GradientFill, width: number, height: number, centered = false) {
+  const cx = centered ? 0 : width / 2;
+  const cy = centered ? 0 : height / 2;
+  const stops = [0, withOpacity(gradient.from, gradient.fromOpacity), 1, withOpacity(gradient.to, gradient.toOpacity)];
+  if (gradient.type === "radial") {
+    return {
+      fillRadialGradientStartPoint: { x: cx, y: cy },
+      fillRadialGradientStartRadius: 0,
+      fillRadialGradientEndPoint: { x: cx, y: cy },
+      fillRadialGradientEndRadius: Math.hypot(width, height) / 2,
+      fillRadialGradientColorStops: stops,
+    };
+  }
   const radians = (gradient.angle * Math.PI) / 180;
   const dx = Math.sin(radians);
   const dy = -Math.cos(radians);
   const half = (Math.abs(width * dx) + Math.abs(height * dy)) / 2;
-  const cx = centered ? 0 : width / 2;
-  const cy = centered ? 0 : height / 2;
   return {
     fillLinearGradientStartPoint: { x: cx - dx * half, y: cy - dy * half },
     fillLinearGradientEndPoint: { x: cx + dx * half, y: cy + dy * half },
-    fillLinearGradientColorStops: [0, gradient.from, 1, gradient.to],
+    fillLinearGradientColorStops: stops,
   };
 }
 

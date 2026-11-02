@@ -83,13 +83,16 @@ function hasValidOptionalCrop(layer: Record<string, unknown>) {
 function hasValidOptionalGradient(gradient: unknown) {
   if (gradient === undefined) return true;
   return isRecord(gradient) && typeof gradient.from === "string" && typeof gradient.to === "string" &&
-    typeof gradient.angle === "number" && Number.isFinite(gradient.angle);
+    typeof gradient.angle === "number" && Number.isFinite(gradient.angle) &&
+    (gradient.type === undefined || gradient.type === "linear" || gradient.type === "radial") &&
+    hasValidOptionalNumber(gradient.fromOpacity, 0, 1) && hasValidOptionalNumber(gradient.toOpacity, 0, 1);
 }
 
 function hasValidOptionalNumber(value: unknown, min: number, max: number) {
   return value === undefined || (typeof value === "number" && Number.isFinite(value) && value >= min && value <= max);
 }
 
+const MASK_TYPES = ["circle", "star", "triangle", "hexagon", "heart", "bubble"];
 const SHAPE_TYPES = ["rectangle", "circle", "star", "triangle", "heart", "bubble", "arrow", "bolt", "bookmark", "speechBubble"];
 
 function hasValidOptionalShadow(shadow: unknown) {
@@ -107,14 +110,15 @@ function isValidLayer(value: unknown): value is Layer {
   if (!isRecord(value) || !hasBaseLayerFields(value) || typeof value.type !== "string") return false;
   if (value.type === "image") return isSafeImageSource(value.src) && hasValidOptionalFilters(value.filters) && hasValidOptionalCrop(value) &&
       hasValidOptionalNumber(value.cornerRadius, 0, 5000) && hasValidOptionalNumber(value.borderWidth, 0, 200) &&
-      (value.borderColor === undefined || typeof value.borderColor === "string");
+      (value.borderColor === undefined || typeof value.borderColor === "string") &&
+      (value.maskShape === undefined || MASK_TYPES.includes(value.maskShape as string));
   if (value.type === "text") {
     return typeof value.text === "string" && typeof value.fontFamily === "string" &&
       typeof value.fontSize === "number" && Number.isFinite(value.fontSize) && typeof value.color === "string" &&
       typeof value.bold === "boolean" && typeof value.italic === "boolean" &&
       (value.align === "left" || value.align === "center" || value.align === "right") &&
       typeof value.lineHeight === "number" && Number.isFinite(value.lineHeight) &&
-      typeof value.letterSpacing === "number" && Number.isFinite(value.letterSpacing) && hasValidOptionalShadow(value.shadow);
+      typeof value.letterSpacing === "number" && Number.isFinite(value.letterSpacing) && hasValidOptionalShadow(value.shadow) && hasValidOptionalGradient(value.fillGradient);
   }
   if (value.type === "sticker") return typeof value.assetId === "string" && isSafeImageSource(value.src);
   if (value.type === "shape") {

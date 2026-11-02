@@ -1,4 +1,6 @@
-import { useRef } from "react";
+import { useMemo, useRef, useState } from "react";
+import { LayerThumb } from "../common/LayerThumb";
+import { STICKER_PACKS } from "../../features/design/stickerPacks";
 import { EMOJI_FONT, EMOJI_STICKERS, MEME_PRESETS } from "../../features/meme/memePresets";
 import { MAX_STICKERS } from "../../features/sticker/stickerStore";
 import type { UserSticker } from "../../features/sticker/stickerStore";
@@ -10,10 +12,15 @@ interface Props {
   onUploadSticker: (file: File) => void;
   onAddUserSticker: (stickerId: string) => void;
   onDeleteUserSticker: (stickerId: string) => void;
+  onAddStickerPackItem: (itemId: string) => void;
 }
 
-export function MemePanel({ onApplyPreset, onAddSticker, userStickers, onUploadSticker, onAddUserSticker, onDeleteUserSticker }: Props) {
+export function MemePanel({ onApplyPreset, onAddSticker, userStickers, onUploadSticker, onAddUserSticker, onDeleteUserSticker, onAddStickerPackItem }: Props) {
   const uploadRef = useRef<HTMLInputElement>(null);
+  const [packId, setPackId] = useState(STICKER_PACKS[0].id);
+  // 썸네일용 레이어는 한 번만 만든다(렌더마다 새 id가 생기지 않도록).
+  const previews = useMemo(() => Object.fromEntries(STICKER_PACKS.flatMap((pack) => pack.items.map((item) => [item.id, item.build()]))), []);
+  const pack = STICKER_PACKS.find((candidate) => candidate.id === packId) ?? STICKER_PACKS[0];
 
   return (
     <aside className="side-panel" aria-label="밈 도구">
@@ -25,6 +32,21 @@ export function MemePanel({ onApplyPreset, onAddSticker, userStickers, onUploadS
           <button key={preset.id} type="button" className="preset-card" onClick={() => onApplyPreset(preset.id)}>
             <strong>{preset.label}</strong>
             <span>{preset.description}</span>
+          </button>
+        ))}
+      </div>
+
+      <h3 className="side-subtitle">스티커 팩</h3>
+      <div className="chip-row" role="group" aria-label="스티커 팩">
+        {STICKER_PACKS.map((candidate) => (
+          <button key={candidate.id} type="button" className={candidate.id === pack.id ? "active" : ""} aria-pressed={candidate.id === pack.id} onClick={() => setPackId(candidate.id)}>{candidate.title}</button>
+        ))}
+      </div>
+      <div className="pack-grid">
+        {pack.items.map((item) => (
+          <button key={item.id} type="button" className="pack-item" onClick={() => onAddStickerPackItem(item.id)} aria-label={`${item.label} 스티커 추가`} title={item.label}>
+            <span className="pack-thumb"><LayerThumb width={100} height={100} backgroundColor="transparent" layers={previews[item.id]} /></span>
+            <span className="pack-name">{item.label}</span>
           </button>
         ))}
       </div>

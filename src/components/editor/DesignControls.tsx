@@ -51,9 +51,23 @@ export function GradientEditor({ label, color, gradient, showPresets = false, on
             <input type="color" value={/^#[0-9a-f]{6}$/i.test(gradient.to) ? gradient.to : "#ffffff"} onChange={(event) => onGradientChange({ ...gradient, to: event.target.value })} aria-label="끝 색" />
             <button type="button" className="btn swap-btn" onClick={() => onGradientChange({ ...gradient, from: gradient.to, to: gradient.from })} title="색 바꾸기" aria-label="시작·끝 색 바꾸기">⇄</button>
           </div>
+          <div className="chip-row" role="group" aria-label="그라디언트 종류">
+            <button type="button" className={gradient.type !== "radial" ? "active" : ""} aria-pressed={gradient.type !== "radial"} onClick={() => onGradientChange({ ...gradient, type: "linear" })}>선형</button>
+            <button type="button" className={gradient.type === "radial" ? "active" : ""} aria-pressed={gradient.type === "radial"} onClick={() => onGradientChange({ ...gradient, type: "radial" })}>원형</button>
+          </div>
+          {gradient.type !== "radial" && (
+            <label className="field-group">
+              <span className="field-label">각도 <output>{Math.round(gradient.angle)}°</output></span>
+              <input type="range" min="0" max="360" value={gradient.angle} onChange={(event) => onGradientChange({ ...gradient, angle: Number(event.target.value) })} />
+            </label>
+          )}
           <label className="field-group">
-            <span className="field-label">각도 <output>{Math.round(gradient.angle)}°</output></span>
-            <input type="range" min="0" max="360" value={gradient.angle} onChange={(event) => onGradientChange({ ...gradient, angle: Number(event.target.value) })} />
+            <span className="field-label">시작 불투명도 <output>{Math.round((gradient.fromOpacity ?? 1) * 100)}%</output></span>
+            <input type="range" min="0" max="100" value={Math.round((gradient.fromOpacity ?? 1) * 100)} onChange={(event) => onGradientChange({ ...gradient, fromOpacity: Number(event.target.value) / 100 })} />
+          </label>
+          <label className="field-group">
+            <span className="field-label">끝 불투명도 <output>{Math.round((gradient.toOpacity ?? 1) * 100)}%</output></span>
+            <input type="range" min="0" max="100" value={Math.round((gradient.toOpacity ?? 1) * 100)} onChange={(event) => onGradientChange({ ...gradient, toOpacity: Number(event.target.value) / 100 })} />
           </label>
         </>
       )}

@@ -1,8 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Image as KonvaImage } from "react-konva";
 import useImage from "use-image";
 import Konva from "konva";
 import type { ImageLayer } from "../../types/canvas";
+import { renderMaskedImage } from "../../features/design/maskImage";
 
 interface Props {
   layer: ImageLayer;
@@ -36,6 +37,17 @@ function vignetteFilter(this: Konva.Node, imageData: ImageData) {
   }
 }
 
+/** 레이어 상자에 cover로 채우고(확대·위치 반영) 원본에서 보여줄 영역을 계산한다. */
+function computeCrop(naturalWidth: number, naturalHeight: number, width: number, height: number, zoom = 1, focusX = 0.5, focusY = 0.5) {
+  const boxRatio = width / height;
+  const imageRatio = naturalWidth / naturalHeight;
+  const coverWidth = imageRatio > boxRatio ? naturalHeight * boxRatio : naturalWidth;
+  const coverHeight = imageRatio > boxRatio ? naturalHeight : naturalWidth / boxRatio;
+  const cropWidth = coverWidth / zoom;
+  const cropHeight = coverHeight / zoom;
+  return { crop: { x: (naturalWidth - cropWidth) * focusX, y: (naturalHeight - cropHeight) * focusY, width: cropWidth, height: cropHeight }, cropWidth, cropHeight };
+}
+
 function activeFilters(layer: ImageLayer, ignore: boolean) {
   const f = ignore ? undefined : layer.filters;
   const list: Array<typeof Konva.Filters.Brighten> = [];
@@ -66,6 +78,14 @@ export function ImageLayerNode({ layer, cropMode = false, ignoreFilters = false,
     cropState.current.zoom = layer.cropZoom ?? 1;
   }, [layer.focusX, layer.focusY, layer.cropZoom]);
 
+  const { maskShape, width: boxWidth, height: boxHeight, cropZoom, focusX, focusY, borderColor, borderWidth } = layer;
+  // 모양 오리기: 오려 낸 결과를 새 비트맵으로 만들어 Image 노드에 넘긴다(Konva는 임의 모양 클리핑을 지원하지 않음).
+  const masked = useMemo(() => {
+    if (!image || !maskShape) return null;
+    const { crop: maskCrop } = computeCrop(image.naturalWidth, image.naturalHeight, boxWidth, boxHeight, cropZoom, focusX, focusY);
+    return renderMaskedImage(image, { width: boxWidth, height: boxHeight, crop: maskCrop, mask: maskShape, borderColor, borderWidth });
+  }, [image, maskShape, boxWidth, boxHeight, cropZoom, focusX, focusY, borderColor, borderWidth]);
+
   // Konva 필터는 노드를 캐시해야 적용된다. 필터가 없으면 캐시를 풀어 원본 렌더링을 유지한다.
   useEffect(() => {
     const node = localRef.current;
@@ -73,32 +93,18 @@ export function ImageLayerNode({ layer, cropMode = false, ignoreFilters = false,
     if (hasFilters) node.cache({ pixelRatio: 1 });
     else node.clearCache();
     node.getLayer()?.batchDraw();
-  }, [image, hasFilters, filterKey, layer.width, layer.height]);
+  }, [image, masked, hasFilters, filterKey, layer.width, layer.height]);
 
   if (!image) return null;
 
-  // cover 방식(PRD 21장 결정: "이미지는 cover 방식으로 캔버스 전체를 채움") — 레이어 박스와
-  // 원본 이미지의 가로세로 비율이 다르면, 넘치는 쪽을 Konva의 crop으로 잘라내 채운다.
-  const boxRatio = layer.width / layer.height;
-  const imageRatio = image.naturalWidth / image.naturalHeight;
-  const coverWidth = imageRatio > boxRatio ? image.naturalHeight * boxRatio : image.naturalWidth;
-  const coverHeight = imageRatio > boxRatio ? image.naturalHeight : image.naturalWidth / boxRatio;
-  // 자르기: cropZoom 배로 확대하고 focus 위치(0~1)에 맞춰 보여줄 영역을 잡는다. 기본값은 기존 중앙 cover와 동일.
-  const zoom = layer.cropZoom ?? 1;
-  const cropWidth = coverWidth / zoom;
-  const cropHeight = coverHeight / zoom;
-  const crop = {
-    x: (image.naturalWidth - cropWidth) * (layer.focusX ?? 0.5),
-    y: (image.naturalHeight - cropHeight) * (layer.focusY ?? 0.5),
-    width: cropWidth,
-    height: cropHeight,
-  };
+  // cover 방식(PRD 21장 결정: "이미지는 cover 방식으로 캔버스 전체를 채움") — 박스와 원본의 비율이 다르면 넘치는 쪽을 crop으로 잘라낸다.
+  const { crop, cropWidth, cropHeight } = computeCrop(image.naturalWidth, image.naturalHeight, layer.width, layer.height, layer.cropZoom, layer.focusX, layer.focusY);
 
   return (
     <KonvaImage
       ref={(node) => { localRef.current = node; nodeRef?.(node); }}
-      image={image}
-      crop={crop}
+      image={masked ?? image}
+      crop={masked ? undefined : crop}
       x={layer.x}
       y={layer.y}
       width={layer.width}
@@ -106,9 +112,9 @@ export function ImageLayerNode({ layer, cropMode = false, ignoreFilters = false,
       rotation={layer.rotation}
       visible={layer.visible}
       opacity={layer.opacity ?? 1}
-      cornerRadius={layer.cornerRadius ?? 0}
-      stroke={layer.borderWidth ? layer.borderColor ?? "#ffffff" : undefined}
-      strokeWidth={layer.borderWidth ?? 0}
+      cornerRadius={masked ? 0 : layer.cornerRadius ?? 0}
+      stroke={!masked && layer.borderWidth ? layer.borderColor ?? "#ffffff" : undefined}
+      strokeWidth={masked ? 0 : layer.borderWidth ?? 0}
       shadowEnabled={!!layer.shadow}
       shadowColor={layer.shadow?.color}
       shadowBlur={layer.shadow?.blur ?? 0}

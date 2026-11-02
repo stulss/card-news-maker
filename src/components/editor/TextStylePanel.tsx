@@ -1,5 +1,6 @@
 import type { TextLayer } from "../../types/canvas";
 import { PanelSection } from "./PanelSection";
+import { GradientEditor } from "./DesignControls";
 import { SHADOW_PRESETS } from "../../features/design/effects";
 
 interface Props {
@@ -52,13 +53,7 @@ export function TextStylePanel({ layer, onChange }: Props) {
             <input type="range" min="-5" max="40" value={layer.letterSpacing} onChange={(event) => onChange({ letterSpacing: Number(event.target.value) })} />
           </label>
 
-          <label>
-            <span>글자 색상</span>
-            <div className="color-field">
-              <input type="color" value={layer.color} onChange={(event) => onChange({ color: event.target.value })} />
-              <input value={layer.color} onChange={(event) => onChange({ color: event.target.value })} aria-label="글자 색상 코드" />
-            </div>
-          </label>
+          <GradientEditor label="글자 색" color={layer.color} gradient={layer.fillGradient} showPresets onColorChange={(color) => onChange({ color })} onGradientChange={(fillGradient) => onChange({ fillGradient })} />
 
           <fieldset>
             <legend>정렬 · 스타일</legend>

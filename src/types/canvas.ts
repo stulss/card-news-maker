@@ -3,9 +3,12 @@
 
 /** 선형 그라디언트. 각도는 CSS와 같다(0°=아래→위, 90°=왼쪽→오른쪽). */
 export interface GradientFill {
+  type?: "linear" | "radial"; // 기본 linear, radial은 중심→가장자리
   from: string;
   to: string;
   angle: number;
+  fromOpacity?: number; // 0~1, 시작 색의 불투명도(기본 1) — 투명→어두움 오버레이용
+  toOpacity?: number;
 }
 
 export interface CanvasProject {
@@ -61,6 +64,7 @@ export interface ImageLayer extends BaseLayer {
   type: "image";
   src: string;
   filters?: ImageFilters;
+  maskShape?: "circle" | "star" | "triangle" | "hexagon" | "heart" | "bubble"; // 이미지를 이 모양으로 오린다
   cornerRadius?: number; // 모서리 둥글기(px)
   borderColor?: string;
   borderWidth?: number;
@@ -82,6 +86,7 @@ export interface TextLayer extends BaseLayer {
   bold: boolean;
   italic: boolean;
   align: "left" | "center" | "right";
+  fillGradient?: GradientFill; // 있으면 글자색(color) 대신 그라디언트로 채운다
   lineHeight: number;
   letterSpacing: number;
   strokeColor?: string;

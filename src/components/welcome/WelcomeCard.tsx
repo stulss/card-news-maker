@@ -6,6 +6,7 @@ interface Props {
   onAddHeadline: () => void;
   onStartSet: () => void;
   onOpenGallery: () => void;
+  onMoreSizes: () => void;
 }
 
 const SIZES = [
@@ -16,7 +17,7 @@ const SIZES = [
 ];
 
 /** 빈 작업일 때 캔버스 위에 보이는 시작 카드(VectorCraft의 "새 파일 빠르게 시작" 화면 방식). */
-export function WelcomeCard({ width, height, onSize, onUpload, onAddHeadline, onStartSet, onOpenGallery }: Props) {
+export function WelcomeCard({ width, height, onSize, onUpload, onAddHeadline, onStartSet, onOpenGallery, onMoreSizes }: Props) {
   return (
     <div className="welcome-card" role="region" aria-label="시작하기">
       <h2>무엇을 만들까요?</h2>
@@ -33,6 +34,7 @@ export function WelcomeCard({ width, height, onSize, onUpload, onAddHeadline, on
           );
         })}
       </div>
+      <button type="button" className="link-btn" onClick={onMoreSizes}>다른 크기·직접 입력…</button>
       <div className="welcome-actions">
         <button type="button" className="btn primary" onClick={onStartSet}>캐러셀 5장 세트로 시작</button>
         <button type="button" className="btn" onClick={onOpenGallery}>템플릿 갤러리</button>

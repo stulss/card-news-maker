@@ -1,12 +1,12 @@
-import type { BlendMode, GradientFill, ImageFilters, Layer, ShadowStyle } from "../../types/canvas";
+import type { BlendMode, GradientFill, ImageFilters, ImageLayer, Layer, ShadowStyle } from "../../types/canvas";
 
 /** 복사해 둔 레이어 스타일(그래픽 스타일). 내용(글자·이미지)·위치·크기는 포함하지 않는다. */
 export interface LayerStyle {
   type: Layer["type"];
   common: { opacity?: number; blendMode?: BlendMode; shadow?: ShadowStyle };
   shape?: { fillColor: string; fillGradient?: GradientFill; strokeColor?: string; strokeWidth?: number; cornerRadius?: number };
-  text?: { fontFamily: string; bold: boolean; italic: boolean; color: string; align: "left" | "center" | "right"; lineHeight: number; letterSpacing: number; strokeColor?: string; strokeWidth?: number };
-  image?: { filters?: ImageFilters; cornerRadius?: number; borderColor?: string; borderWidth?: number };
+  text?: { fontFamily: string; bold: boolean; italic: boolean; color: string; fillGradient?: GradientFill; align: "left" | "center" | "right"; lineHeight: number; letterSpacing: number; strokeColor?: string; strokeWidth?: number };
+  image?: { filters?: ImageFilters; maskShape?: ImageLayer["maskShape"]; cornerRadius?: number; borderColor?: string; borderWidth?: number };
 }
 
 export function copyStyle(layer: Layer): LayerStyle {
@@ -17,9 +17,9 @@ export function copyStyle(layer: Layer): LayerStyle {
   if (layer.type === "shape") {
     style.shape = structuredClone({ fillColor: layer.fillColor, fillGradient: layer.fillGradient, strokeColor: layer.strokeColor, strokeWidth: layer.strokeWidth, cornerRadius: layer.cornerRadius });
   } else if (layer.type === "text") {
-    style.text = structuredClone({ fontFamily: layer.fontFamily, bold: layer.bold, italic: layer.italic, color: layer.color, align: layer.align, lineHeight: layer.lineHeight, letterSpacing: layer.letterSpacing, strokeColor: layer.strokeColor, strokeWidth: layer.strokeWidth });
+    style.text = structuredClone({ fontFamily: layer.fontFamily, bold: layer.bold, italic: layer.italic, color: layer.color, fillGradient: layer.fillGradient, align: layer.align, lineHeight: layer.lineHeight, letterSpacing: layer.letterSpacing, strokeColor: layer.strokeColor, strokeWidth: layer.strokeWidth });
   } else if (layer.type === "image") {
-    style.image = structuredClone({ filters: layer.filters, cornerRadius: layer.cornerRadius, borderColor: layer.borderColor, borderWidth: layer.borderWidth });
+    style.image = structuredClone({ filters: layer.filters, maskShape: layer.maskShape, cornerRadius: layer.cornerRadius, borderColor: layer.borderColor, borderWidth: layer.borderWidth });
   }
   return style;
 }
