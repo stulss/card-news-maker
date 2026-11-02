@@ -1,6 +1,6 @@
 import type { CanvasProject, Layer, ShapeLayer, TextLayer } from "../../types/canvas";
 
-export const EMOJI_FONT = '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
+export const EMOJI_FONT = '"Noto Color Emoji", "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
 
 export const EMOJI_STICKERS = [
   "😂", "🤣", "😭", "😎", "🥹", "😡", "🤔", "🙄",

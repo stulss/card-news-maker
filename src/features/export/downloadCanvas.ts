@@ -1,4 +1,4 @@
-export type ExportFormat = "png" | "jpg" | "webp";
+export type ExportFormat = "png" | "jpg" | "webp" | "svg";
 export type ExportFileExtension = ExportFormat | "zip";
 
 export function createExportFileName(format: ExportFileExtension, now = new Date()) {

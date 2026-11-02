@@ -47,7 +47,7 @@ export function LayerThumb({ width, height, backgroundColor, backgroundGradient,
           );
         }
         if (layer.type === "image") {
-          return <img key={layer.id} className="thumb-item thumb-image" alt="" src={layer.src} style={{ ...box, borderRadius: layer.maskShape === "circle" ? "50%" : layer.cornerRadius ? `${(layer.cornerRadius / width) * 100}cqw` : undefined, clipPath: layer.maskShape ? CLIP_PATHS[layer.maskShape] : undefined }} />;
+          return <img key={layer.id} className="thumb-item thumb-image" alt="" src={layer.src} style={{ ...box, transform: [layer.rotation ? `rotate(${layer.rotation}deg)` : "", layer.flipX ? "scaleX(-1)" : "", layer.flipY ? "scaleY(-1)" : ""].filter(Boolean).join(" ") || undefined, borderRadius: layer.maskShape === "circle" ? "50%" : layer.cornerRadius ? `${(layer.cornerRadius / width) * 100}cqw` : undefined, clipPath: layer.maskShape ? CLIP_PATHS[layer.maskShape] : undefined }} />;
         }
         return null;
       })}

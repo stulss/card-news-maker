@@ -1,3 +1,4 @@
+import { useModalFocus } from "../common/useModalFocus";
 import { useEffect, useRef, useState } from "react";
 import { createStickerFromFile } from "../../features/sticker/stickerStore";
 import { estimateBytes, formatBytes } from "../../features/export/exportImage";
@@ -21,7 +22,7 @@ interface Props {
   onShare: (settings: ExportSettings, scope: ExportScope) => void;
 }
 
-const FORMATS: Array<{ id: ExportFormat; label: string }> = [{ id: "png", label: "PNG" }, { id: "jpg", label: "JPG" }, { id: "webp", label: "WebP" }];
+const FORMATS: Array<{ id: ExportFormat; label: string }> = [{ id: "png", label: "PNG" }, { id: "jpg", label: "JPG" }, { id: "webp", label: "WebP" }, { id: "svg", label: "SVG" }];
 const SCALES: Array<{ id: ExportSettings["scale"]; label: string }> = [{ id: 0.5, label: "50%" }, { id: 1, label: "100%" }, { id: 2, label: "200%" }];
 const POSITIONS: Array<{ id: WatermarkPosition; label: string }> = [
   { id: "br", label: "오른쪽 아래" }, { id: "bl", label: "왼쪽 아래" }, { id: "tr", label: "오른쪽 위" }, { id: "tl", label: "왼쪽 위" }, { id: "center", label: "가운데" },
@@ -31,6 +32,7 @@ const CAPTION_LIMIT = 2200; // 인스타그램 캡션 글자 수 상한
 const HASHTAG_LIMIT = 30; // 게시물당 해시태그 상한
 
 export function ExportDialog({ settings, baseSize, slideCount, activeIndex, caption, canShare, onChange, onCaptionChange, onClose, onRender, onDownload, onShare }: Props) {
+  useModalFocus();
   const [preview, setPreview] = useState<{ url: string; bytes: number } | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [scope, setScope] = useState<ExportScope>(slideCount > 1 ? "all" : "current");
@@ -38,6 +40,7 @@ export function ExportDialog({ settings, baseSize, slideCount, activeIndex, capt
   const [logoError, setLogoError] = useState<string | null>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const multi = slideCount > 1;
+  const isSvg = settings.format === "svg";
   const effectiveScope: ExportScope = multi ? scope : "current";
 
   useEffect(() => {
@@ -107,7 +110,7 @@ export function ExportDialog({ settings, baseSize, slideCount, activeIndex, capt
                   <button type="button" className={effectiveScope === "all" ? "active" : ""} aria-pressed={effectiveScope === "all"} onClick={() => setScope("all")}>전체 {slideCount}장 (ZIP)</button>
                   <button type="button" className={effectiveScope === "current" ? "active" : ""} aria-pressed={effectiveScope === "current"} onClick={() => setScope("current")}>이 장만 ({activeIndex + 1}번)</button>
                 </div>
-                <label className="toggle-row"><input type="checkbox" checked={settings.pageNumber} onChange={(event) => onChange({ ...settings, pageNumber: event.target.checked })} /><span>하단에 페이지 번호(1 / {slideCount}) 넣기</span></label>
+                <label className="toggle-row"><input type="checkbox" disabled={isSvg} checked={settings.pageNumber} onChange={(event) => onChange({ ...settings, pageNumber: event.target.checked })} /><span>하단에 페이지 번호(1 / {slideCount}) 넣기</span></label>
               </div>
             )}
 
@@ -120,16 +123,17 @@ export function ExportDialog({ settings, baseSize, slideCount, activeIndex, capt
               </div>
             </div>
 
+            {isSvg && <p className="export-warn">SVG는 도형·글자·이미지를 벡터로 보존해 일러스트레이터·피그마 등에서 열 수 있어요. 글꼴 파일은 포함되지 않고(이름만 기록), 비네팅·필름 입자·모자이크 같은 픽셀 효과와 워터마크·크기·페이지 번호는 적용되지 않습니다.</p>}
             <label className="field-group">
-              <span className="field-label">품질 <output>{settings.format === "png" ? "무손실" : settings.quality}</output></span>
-              <input type="range" min="1" max="100" value={settings.quality} disabled={settings.format === "png"} onChange={(event) => onChange({ ...settings, quality: Number(event.target.value) })} />
+              <span className="field-label">품질 <output>{settings.format === "png" ? "무손실" : isSvg ? "벡터" : settings.quality}</output></span>
+              <input type="range" min="1" max="100" value={settings.quality} disabled={settings.format === "png" || isSvg} onChange={(event) => onChange({ ...settings, quality: Number(event.target.value) })} />
             </label>
 
             <div className="field-group">
               <span className="field-label">크기 <output>{outWidth} × {outHeight}px</output></span>
               <div className="chip-row" role="group" aria-label="크기">
                 {SCALES.map((scale) => (
-                  <button key={scale.id} type="button" className={settings.scale === scale.id ? "active" : ""} aria-pressed={settings.scale === scale.id} onClick={() => onChange({ ...settings, scale: scale.id })}>{scale.label}</button>
+                  <button key={scale.id} type="button" disabled={isSvg} className={settings.scale === scale.id ? "active" : ""} aria-pressed={settings.scale === scale.id} onClick={() => onChange({ ...settings, scale: scale.id })}>{scale.label}</button>
                 ))}
               </div>
               {lowRes && <p className="export-warn">⚠ 가로 1080px보다 작아 인스타그램에서 흐리게 보일 수 있어요.</p>}
@@ -137,7 +141,7 @@ export function ExportDialog({ settings, baseSize, slideCount, activeIndex, capt
 
             <fieldset className="field-group watermark-group">
               <legend className="field-label">워터마크</legend>
-              <label className="toggle-row"><input type="checkbox" checked={settings.watermark.enabled} onChange={(event) => setWatermark({ enabled: event.target.checked })} /><span>글자 워터마크 넣기</span></label>
+              <label className="toggle-row"><input type="checkbox" disabled={isSvg} checked={settings.watermark.enabled} onChange={(event) => setWatermark({ enabled: event.target.checked })} /><span>글자 워터마크 넣기</span></label>
               {settings.watermark.enabled && (
                 <>
                   <div className="chip-row" role="group" aria-label="워터마크 종류">

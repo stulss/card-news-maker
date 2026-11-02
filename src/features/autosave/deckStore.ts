@@ -64,25 +64,36 @@ export async function clearSavedDeck(): Promise<void> {
   await withStore("readwrite", (store) => store.delete(KEY));
 }
 
-/** 저장된 덱을 읽는다. 템플릿 JSON과 같은 검증기를 통과한 경우에만 돌려주고, 깨졌으면 null. */
+/** 파일·저장소에서 읽은 덱 후보를 검증해 Deck으로 만든다. 템플릿 JSON과 같은 검증기를 쓰며, 잘못되면 오류를 던진다. */
+export function validateDeck(raw: unknown): Deck {
+  const saved = raw as { slides?: CanvasProject[]; active?: number } | undefined;
+  if (!saved || !Array.isArray(saved.slides) || saved.slides.length === 0 || saved.slides.length > MAX_SLIDES) throw new Error("slides");
+  const now = new Date().toISOString();
+  const bundle = JSON.stringify({
+    version: 1,
+    templates: saved.slides.map((slide, index): SavedTemplate => ({
+      id: String(slide.id ?? index), name: `slide-${index}`, createdAt: now, updatedAt: now,
+      canvas: { width: slide.width, height: slide.height, backgroundColor: slide.backgroundColor, backgroundGradient: slide.backgroundGradient, layers: slide.layers },
+    })),
+  });
+  const validated = parseTemplateBundle(bundle);
+  const slides: CanvasProject[] = validated.map((template, index) => ({
+    id: String(saved.slides![index].id ?? crypto.randomUUID()), ...template.canvas, createdAt: saved.slides![index].createdAt ?? now, updatedAt: saved.slides![index].updatedAt ?? now,
+  }));
+  const active = typeof saved.active === "number" ? Math.min(Math.max(0, Math.floor(saved.active)), slides.length - 1) : 0;
+  return { slides, active };
+}
+
+/** 사진의 blob: 주소를 data URL로 바꾼 덱(파일 저장·자동 저장용). */
+export async function toPersistentDeck(deck: Deck): Promise<Deck> {
+  const slides = await Promise.all(deck.slides.map(async (slide) => ({ ...slide, layers: await persistLayers(slide.layers) })));
+  return { slides, active: deck.active };
+}
+
+/** 저장된 덱을 읽는다. 검증을 통과한 경우에만 돌려주고, 깨졌으면 null. */
 export async function loadSavedDeck(): Promise<Deck | null> {
   try {
-    const saved = (await withStore("readonly", (store) => store.get(KEY))) as { slides?: CanvasProject[]; active?: number } | undefined;
-    if (!saved || !Array.isArray(saved.slides) || saved.slides.length === 0 || saved.slides.length > MAX_SLIDES) return null;
-    const now = new Date().toISOString();
-    const bundle = JSON.stringify({
-      version: 1,
-      templates: saved.slides.map((slide, index): SavedTemplate => ({
-        id: String(slide.id ?? index), name: `slide-${index}`, createdAt: now, updatedAt: now,
-        canvas: { width: slide.width, height: slide.height, backgroundColor: slide.backgroundColor, backgroundGradient: slide.backgroundGradient, layers: slide.layers },
-      })),
-    });
-    const validated = parseTemplateBundle(bundle);
-    const slides: CanvasProject[] = validated.map((template, index) => ({
-      id: saved.slides![index].id, ...template.canvas, createdAt: saved.slides![index].createdAt ?? now, updatedAt: saved.slides![index].updatedAt ?? now,
-    }));
-    const active = typeof saved.active === "number" ? Math.min(Math.max(0, Math.floor(saved.active)), slides.length - 1) : 0;
-    return { slides, active };
+    return validateDeck(await withStore("readonly", (store) => store.get(KEY)));
   } catch {
     return null;
   }

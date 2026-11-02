@@ -1,4 +1,4 @@
-# card-news-maker
+# 카드툰 (card-news-maker)
 
 이미지에 문구를 얹어 카드뉴스·밈을 만드는 웹 도구. 로그인 없이 브라우저에서 바로 쓰고,
 업로드한 이미지는 서버로 전송되지 않는다. 밈 자막 프리셋·이모지 스티커·이미지 보정·실행 취소를 지원한다.
@@ -15,10 +15,12 @@
 | 파일 | 용도 |
 |---|---|
 | `작업내역_체크리스트.md` | **진행 상황·결정 기록·작업 로그.** AI 공용 인수인계 파일이자 단일 진실 공급원 |
+| `docs/11_상용화_체크리스트.md` | 상용화 준비 상태·운영자가 직접 할 일·CSP/PWA/테스트 상세 |
+| `CHANGELOG.md` | 버전별 변경 이력 |
 | `docs/10_AI_배경제거와_고급편집.md` | AI 배경 제거·이력 패널·이미지 오리기·스티커 팩 |
 | `docs/09_디자인_가이드.md` | 디자인 시스템·그래픽 도구·구현 메모 |
 | `docs/08_인스타그램_사용가이드.md` | 인스타 규격·작업 순서·업로드 방법·한계 |
-| `PRD.md` | 개발요청서 49장(48-1·48-2 포함). 기능 요구사항·화면 설계·데이터 구조(43·44장 야구/백엔드는 폐기, 45장이 2차 기능) |
+| `PRD.md` | 개발요청서 50장(48-1·48-2 포함). 기능 요구사항·화면 설계·데이터 구조(43·44장 야구/백엔드는 폐기, 45장이 2차 기능) |
 | `CLAUDE.md` | AI가 폴더를 통째로 읽지 않도록 하는 토큰 절약 규칙 |
 | `AGENTS.md` / `GEMINI.md` | Codex·Antigravity 프로젝트 진입 지침 |
 | `docs/01_기획.md` | 구현된 아키텍처·기술 선택 요약 |
@@ -55,7 +57,7 @@
 
 ```text
 card-news-maker/
-├── PRD.md                       # 개발요청서 49장
+├── PRD.md                       # 개발요청서 50장
 ├── CLAUDE.md                    # AI 작업 규칙
 ├── AGENTS.md / GEMINI.md        # Codex / Antigravity 진입 지침
 ├── README.md
@@ -88,7 +90,7 @@ card-news-maker/
     ├── features/ai/             # removeBackground — 브라우저 내 AI 배경 제거
     ├── features/deck/           # Deck(슬라이드 묶음)·복제·크기 동기화
     ├── features/autosave/       # deckStore — IndexedDB 자동 저장·복원
-    ├── features/export/         # exportImage(워터마크·페이지 번호), zip, downloadCanvas
+    ├── features/export/         # exportImage(워터마크·페이지 번호), svgExport(벡터), zip, downloadCanvas
     ├── features/image/          # loadImageFile — F-01 형식·용량 검증
     ├── features/export/         # downloadCanvas — PNG/JPG 내보내기
     ├── features/template/       # templateStore — CRUD·JSON 가져오기/내보내기
@@ -145,6 +147,10 @@ card-news-maker/
 | 텍스트 그라디언트 | 글자 색을 그라디언트로(두 색·각도·원형·불투명도) |
 | 이미지 모양 오리기 | 원형·별·삼각형·육각형·하트·말풍선 |
 | 스티커 팩 | 배지·말풍선·강조·장식 22종(그룹) |
+| 이미지 뒤집기 | 좌우·상하 |
+| 텍스트 곡선 | 아치/스마일(-100~100) |
+| SVG 내보내기 | 도형·글자·그라디언트·그림자·이미지 배치를 벡터로(전체는 ZIP) |
+| 영역 효과 | AI 배경 흐리게(인물 모드), 스티커 외곽선, 하늘 제거(간이) |
 | AI 배경 제거 | 사람 사진의 배경을 브라우저 안에서 지움(처음 한 번 모델 약 25MB 내려받기) |
 | 시작 카드 | 빈 작업에서 크기·세트·갤러리로 바로 시작 |
 | 단축키 | Ctrl+D 복제, Delete 삭제, 방향키 1px(Shift 10px) 이동, Esc 선택 해제 |
@@ -162,5 +168,18 @@ card-news-maker/
 | React, Konva, react-konva, use-image | MIT | 편집기·캔버스 |
 | @huggingface/transformers (+ onnxruntime-web) | Apache-2.0 | AI 배경 제거 실행 |
 | Xenova/modnet (MODNet 모델) | Apache-2.0 | AI 배경 제거 모델(처음 사용할 때 내려받음) |
-| 한글 웹폰트 (Noto·고운바탕·주아·도현 등) | SIL OFL | `index.html`의 Google Fonts |
+| 한글 웹폰트 (`@fontsource/*`: IBM Plex Sans KR·Noto·고운바탕·주아·도현 등) | SIL OFL | 자체 호스팅(`src/fonts.ts`) — 외부 요청 없음 |
+| Vitest, Playwright | MIT / Apache-2.0 | 개발·테스트 전용(배포물에 미포함) |
 
+전체 목록은 앱 메뉴(☰) → 오픈소스 라이선스 고지(`public/legal/notices.html`, 빌드 때 자동 생성).
+
+## 개발·검증 명령
+
+| 명령 | 용도 |
+|---|---|
+| `npm run dev` | 개발 서버 |
+| `npm run verify` | lint → tsc → 라이선스 검사 → 단위 테스트 → 빌드 → e2e (CI와 동일) |
+| `npm test` / `npm run test:e2e` | Vitest / Playwright(운영 빌드 + CSP 헤더로 실행, 먼저 `npm run build`) |
+| `node scripts/serve-dist.mjs 4173` | `dist/`를 `vercel.json` 헤더 그대로 로컬에서 서빙 |
+
+운영 전 채울 것: `public/legal/*.html`의 `[대괄호]` 항목(운영자·문의처) — `docs/11_상용화_체크리스트.md` §2.

@@ -172,7 +172,7 @@ function createSingleTemplates(): GalleryTemplate[] {
       text("VS", "VS", { x: 440, y: 70, width: 200, height: 120 }, { fontSize: 80, color: "#111111", strokeColor: "#ffffff", strokeWidth: 8 }),
     ]),
     make("meme-reaction", "리액션 자막", "밈", 1080, 1080, "#111111", [
-      text("이모지", "😂", { x: 340, y: 160, width: 400, height: 400 }, { fontFamily: '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif', fontSize: 320, bold: false }),
+      text("이모지", "😂", { x: 340, y: 160, width: 400, height: 400 }, { fontFamily: '"Noto Color Emoji", "Segoe UI Emoji", "Apple Color Emoji", sans-serif', fontSize: 320, bold: false }),
       text("자막", "나 지금 이 상황", { x: 54, y: 700, width: 972, height: 200 }, { fontSize: 96, strokeWidth: 8 }),
     ]),
     make("notice-urgent", "긴급 공지", "공지", 1080, 1080, "#e11d2e", [
@@ -217,8 +217,8 @@ function createSingleTemplates(): GalleryTemplate[] {
     make("meme-drake", "선택 비교 밈", "밈", 1080, 1080, "#ffffff", [
       box("위 칸", { x: 0, y: 0, width: 1080, height: 540 }, "#f1f5f9"),
       box("아래 칸", { x: 0, y: 540, width: 1080, height: 540 }, "#e2e8f0"),
-      text("싫어", "🙅", { x: 40, y: 150, width: 380, height: 260 }, { fontFamily: '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif', fontSize: 200, bold: false }),
-      text("좋아", "🙆", { x: 40, y: 690, width: 380, height: 260 }, { fontFamily: '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif', fontSize: 200, bold: false }),
+      text("싫어", "🙅", { x: 40, y: 150, width: 380, height: 260 }, { fontFamily: '"Noto Color Emoji", "Segoe UI Emoji", "Apple Color Emoji", sans-serif', fontSize: 200, bold: false }),
+      text("좋아", "🙆", { x: 40, y: 690, width: 380, height: 260 }, { fontFamily: '"Noto Color Emoji", "Segoe UI Emoji", "Apple Color Emoji", sans-serif', fontSize: 200, bold: false }),
       text("위 문구", "하기 싫은 것", { x: 440, y: 200, width: 600, height: 160 }, { fontSize: 72, color: "#111111", align: "left" }),
       text("아래 문구", "하고 싶은 것", { x: 440, y: 740, width: 600, height: 160 }, { fontSize: 72, color: "#111111", align: "left" }),
     ]),
@@ -248,7 +248,7 @@ function createSingleTemplates(): GalleryTemplate[] {
       text("X", "X", { x: 570, y: 650, width: 430, height: 330 }, { fontSize: 300 }),
     ]),
     make("sns-birthday", "생일 축하", "SNS", 1080, 1080, "#fff7ed", [
-      text("이모지", "🎂", { x: 340, y: 90, width: 400, height: 380 }, { fontFamily: '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif', fontSize: 300, bold: false }),
+      text("이모지", "🎂", { x: 340, y: 90, width: 400, height: 380 }, { fontFamily: '"Noto Color Emoji", "Segoe UI Emoji", "Apple Color Emoji", sans-serif', fontSize: 300, bold: false }),
       text("문구", "생일 축하해요!", { x: 80, y: 540, width: 920, height: 200 }, { fontSize: 120, color: "#c2410c" }),
       text("메시지", "오늘 하루 가장 행복하길 바라요", { x: 80, y: 780, width: 920, height: 120 }, { fontSize: 48, bold: false, color: "#9a3412" }),
     ]),

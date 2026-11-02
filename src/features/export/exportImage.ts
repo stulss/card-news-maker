@@ -27,7 +27,7 @@ export const DEFAULT_EXPORT_SETTINGS: ExportSettings = {
 };
 
 const STORAGE_KEY = "card-news-export-settings";
-const FORMATS: ExportFormat[] = ["png", "jpg", "webp"];
+const FORMATS: ExportFormat[] = ["png", "jpg", "webp", "svg"];
 const POSITIONS: WatermarkPosition[] = ["br", "bl", "tr", "tl", "center"];
 
 const clamp = (value: unknown, min: number, max: number, fallback: number) =>
@@ -144,6 +144,7 @@ export async function renderExport(pngDataUrl: string, settings: ExportSettings,
 
 export function estimateBytes(dataUrl: string) {
   const comma = dataUrl.indexOf(",");
+  if (dataUrl.startsWith("data:image/svg+xml")) return new TextEncoder().encode(decodeURIComponent(dataUrl.slice(comma + 1))).length;
   return Math.round(((dataUrl.length - comma - 1) * 3) / 4);
 }
 

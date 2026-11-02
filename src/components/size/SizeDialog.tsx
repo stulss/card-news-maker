@@ -1,3 +1,4 @@
+import { useModalFocus } from "../common/useModalFocus";
 import { useEffect, useState } from "react";
 
 interface Props {
@@ -29,6 +30,7 @@ const GROUPS: Array<{ title: string; sizes: Array<{ label: string; width: number
 
 /** 캔버스 크기 설정: SNS별 프리셋과 직접 입력(PhotoCraft의 새 문서·VectorCraft의 Social 프리셋을 참고). */
 export function SizeDialog({ width, height, onApply, onClose }: Props) {
+  useModalFocus();
   const [custom, setCustom] = useState({ width: String(width), height: String(height) });
 
   useEffect(() => {

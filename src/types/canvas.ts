@@ -64,6 +64,8 @@ export interface ImageLayer extends BaseLayer {
   type: "image";
   src: string;
   filters?: ImageFilters;
+  flipX?: boolean; // 좌우 뒤집기
+  flipY?: boolean; // 상하 뒤집기
   maskShape?: "circle" | "star" | "triangle" | "hexagon" | "heart" | "bubble"; // 이미지를 이 모양으로 오린다
   cornerRadius?: number; // 모서리 둥글기(px)
   borderColor?: string;
@@ -87,6 +89,7 @@ export interface TextLayer extends BaseLayer {
   italic: boolean;
   align: "left" | "center" | "right";
   fillGradient?: GradientFill; // 있으면 글자색(color) 대신 그라디언트로 채운다
+  curve?: number; // -100~100, 양수는 아치(∩), 음수는 스마일(∪). 0/없음은 직선. 곡선 글자는 한 줄·가운데 정렬로 그린다
   lineHeight: number;
   letterSpacing: number;
   strokeColor?: string;

@@ -1,3 +1,4 @@
+import { useModalFocus } from "../common/useModalFocus";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 export interface Command {
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export function CommandPalette({ commands, onClose }: Props) {
+  useModalFocus();
   const [query, setQuery] = useState("");
   const [index, setIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);

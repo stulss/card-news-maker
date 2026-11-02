@@ -2,6 +2,7 @@ import type { TextLayer } from "../../types/canvas";
 import { PanelSection } from "./PanelSection";
 import { GradientEditor } from "./DesignControls";
 import { SHADOW_PRESETS } from "../../features/design/effects";
+import { curvedTextHeight } from "../../features/design/curvedText";
 
 interface Props {
   layer: TextLayer;
@@ -51,6 +52,13 @@ export function TextStylePanel({ layer, onChange }: Props) {
           <label>
             <span>글자 간격 <output>{layer.letterSpacing}</output></span>
             <input type="range" min="-5" max="40" value={layer.letterSpacing} onChange={(event) => onChange({ letterSpacing: Number(event.target.value) })} />
+          </label>
+
+          <label>
+            <span>곡선 <output>{layer.curve ?? 0}</output></span>
+            <input type="range" min="-100" max="100" value={layer.curve ?? 0}
+              onChange={(event) => { const curve = Number(event.target.value); onChange(curve ? { curve, height: curvedTextHeight(layer, curve) } : { curve: undefined }); }} />
+            {!!layer.curve && <small className="panel-hint">곡선 글자는 한 줄로 가운데 정렬되어 그려져요. 글자 크기·문구를 바꾼 뒤 곡선을 다시 움직이면 상자 높이가 맞춰집니다.</small>}
           </label>
 
           <GradientEditor label="글자 색" color={layer.color} gradient={layer.fillGradient} showPresets onColorChange={(color) => onChange({ color })} onGradientChange={(fillGradient) => onChange({ fillGradient })} />

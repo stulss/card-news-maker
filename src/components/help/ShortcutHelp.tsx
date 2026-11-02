@@ -1,3 +1,4 @@
+import { useModalFocus } from "../common/useModalFocus";
 import { useEffect } from "react";
 
 interface Props {
@@ -20,6 +21,8 @@ const SHORTCUT_GROUPS: Array<{ title: string; items: Array<{ keys: string; label
   {
     title: "도구·창",
     items: [
+      { keys: "Ctrl + S", label: "프로젝트 저장(.cardnews.json)" },
+      { keys: "Ctrl + O", label: "프로젝트 열기" },
       { keys: "Ctrl + K", label: "명령 팔레트" },
       { keys: "Ctrl + E", label: "내보내기 창" },
       { keys: "Shift + R", label: "눈금자 켜기/끄기" },
@@ -41,6 +44,7 @@ const SHORTCUT_GROUPS: Array<{ title: string; items: Array<{ keys: string; label
 ];
 
 export function ShortcutHelp({ onClose }: Props) {
+  useModalFocus();
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
     window.addEventListener("keydown", onKey);

@@ -111,14 +111,16 @@ function isValidLayer(value: unknown): value is Layer {
   if (value.type === "image") return isSafeImageSource(value.src) && hasValidOptionalFilters(value.filters) && hasValidOptionalCrop(value) &&
       hasValidOptionalNumber(value.cornerRadius, 0, 5000) && hasValidOptionalNumber(value.borderWidth, 0, 200) &&
       (value.borderColor === undefined || typeof value.borderColor === "string") &&
-      (value.maskShape === undefined || MASK_TYPES.includes(value.maskShape as string));
+      (value.maskShape === undefined || MASK_TYPES.includes(value.maskShape as string)) &&
+      (value.flipX === undefined || typeof value.flipX === "boolean") && (value.flipY === undefined || typeof value.flipY === "boolean");
   if (value.type === "text") {
     return typeof value.text === "string" && typeof value.fontFamily === "string" &&
       typeof value.fontSize === "number" && Number.isFinite(value.fontSize) && typeof value.color === "string" &&
       typeof value.bold === "boolean" && typeof value.italic === "boolean" &&
       (value.align === "left" || value.align === "center" || value.align === "right") &&
       typeof value.lineHeight === "number" && Number.isFinite(value.lineHeight) &&
-      typeof value.letterSpacing === "number" && Number.isFinite(value.letterSpacing) && hasValidOptionalShadow(value.shadow) && hasValidOptionalGradient(value.fillGradient);
+      typeof value.letterSpacing === "number" && Number.isFinite(value.letterSpacing) && hasValidOptionalShadow(value.shadow) && hasValidOptionalGradient(value.fillGradient) &&
+      hasValidOptionalNumber(value.curve, -100, 100);
   }
   if (value.type === "sticker") return typeof value.assetId === "string" && isSafeImageSource(value.src);
   if (value.type === "shape") {

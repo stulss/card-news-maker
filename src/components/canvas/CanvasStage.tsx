@@ -7,6 +7,7 @@ import { Rulers } from "./Rulers";
 import type { RulerGuide } from "./Rulers";
 import type { BlendMode, CanvasProject, Layer, ShapeLayer } from "../../types/canvas";
 import { ImageLayerNode } from "./ImageLayerNode";
+import { CurvedTextNode } from "./CurvedTextNode";
 
 export interface CanvasStageHandle {
   toDataUrl: (format: "png" | "jpg", quality?: number, pixelRatio?: number) => string;
@@ -42,9 +43,10 @@ const clampZoom = (value: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value
 function readNodeTransform(node: Konva.Node) {
   const scaleX = node.scaleX();
   const scaleY = node.scaleY();
-  node.scaleX(1);
-  node.scaleY(1);
-  return { x: node.x(), y: node.y(), width: Math.max(10, node.width() * scaleX), height: Math.max(10, node.height() * scaleY), rotation: node.rotation() };
+  // 뒤집힌 노드(scale < 0)는 부호를 유지한 채 크기만 읽는다.
+  node.scaleX(scaleX < 0 ? -1 : 1);
+  node.scaleY(scaleY < 0 ? -1 : 1);
+  return { x: node.x(), y: node.y(), width: Math.max(10, node.width() * Math.abs(scaleX)), height: Math.max(10, node.height() * Math.abs(scaleY)), rotation: node.rotation() };
 }
 
 // 캔버스를 컨테이너 크기에 맞춰(fit) 표시한다 — PRD 14장.
@@ -53,6 +55,7 @@ export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasS
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
+  const [fontTick, setFontTick] = useState(0);
   const stageRef = useRef<Konva.Stage>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
   const contentLayerRef = useRef<Konva.Layer>(null);
@@ -77,14 +80,15 @@ export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasS
   }, []);
 
   // 캔버스는 쓰이지 않은 웹폰트를 스스로 불러오지 않는다 — 텍스트 레이어가 쓰는 글꼴을 직접 로드한 뒤 다시 그린다.
-  const fontKey = project.layers.flatMap((layer) => layer.type === "text" ? [`${layer.italic ? "italic " : ""}${layer.bold ? "bold" : "normal"}|${layer.fontFamily}`] : []).join(";");
+  // 글꼴은 쓰이는 글자 조각(unicode-range)까지 불러와야 하므로 문구도 함께 넘긴다(이모지·한글 조각 포함).
+  const fontKey = JSON.stringify(project.layers.flatMap((layer) => layer.type === "text" ? [[`${layer.italic ? "italic " : ""}${layer.bold ? "bold" : "normal"}`, layer.fontFamily, layer.text]] : []));
   useEffect(() => {
-    const requests = [...new Set(fontKey.split(";").filter(Boolean))].map((entry) => {
-      const [style, family] = entry.split("|");
+    const entries = JSON.parse(fontKey) as Array<[string, string, string]>;
+    const requests = entries.map(([style, family, text]) => {
       const quoted = /[",]/.test(family) ? family : `"${family}"`;
-      return document.fonts.load(`${style.replace("normal", "")} 32px ${quoted}`.trim(), "가나다ABC").catch(() => []);
+      return document.fonts.load(`${style.replace("normal", "")} 32px ${quoted}`.trim(), text || "가나다ABC").catch(() => []);
     });
-    Promise.all(requests).then(() => stageRef.current?.batchDraw());
+    Promise.all(requests).then(() => { stageRef.current?.batchDraw(); setFontTick((tick) => tick + 1); });
   }, [fontKey]);
 
   // 눈금자가 캔버스 (0,0)의 화면 위치를 따라가도록, 렌더·스크롤·리사이즈마다 위치를 다시 잰다(값이 같으면 갱신하지 않는다).
@@ -350,6 +354,10 @@ export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasS
                 if (layer.shapeType === "star") return <Star key={layer.id} {...shared} x={cx} y={cy} numPoints={5} innerRadius={radius * 0.45} outerRadius={radius} />;
                 if (layer.shapeType === "triangle") return <RegularPolygon key={layer.id} {...shared} x={cx} y={cy} sides={3} radius={radius} />;
                 return <Rect key={layer.id} {...shared} x={layer.x} y={layer.y} width={layer.width} height={layer.height} cornerRadius={layer.cornerRadius ?? 0} />;
+              }
+              if (layer.type === "text" && layer.curve) {
+                return <CurvedTextNode key={layer.id} layer={layer} fontTick={fontTick} nodeRef={rememberNode(layer.id)} onSelect={() => onSelectLayer(layer.id)}
+                  onDragEnd={(node) => commitMove(layer, node)} onTransformEnd={(node) => commitTransform(layer, node)} />;
               }
               if (layer.type === "text") {
                 return <KonvaText ref={rememberNode(layer.id)} key={layer.id} x={layer.x} y={layer.y} width={layer.width} height={layer.height}

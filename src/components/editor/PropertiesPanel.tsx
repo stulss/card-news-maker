@@ -4,6 +4,7 @@ import type { BlendMode, GradientFill, ImageFilters, ImageLayer, Layer, ShapeLay
 import { TextStylePanel } from "./TextStylePanel";
 import { PanelSection } from "./PanelSection";
 import { MASK_OPTIONS } from "../../features/design/shapes";
+import type { ImageEffectKind } from "../../features/design/imageEffects";
 import { GradientEditor, ShadowFields } from "./DesignControls";
 
 export type AlignMode = "left" | "hcenter" | "right" | "top" | "vcenter" | "bottom";
@@ -37,6 +38,7 @@ interface Props {
   canPasteStyle: boolean;
   aiBusy: string | null;
   onRemoveBackground: () => void;
+  onImageEffect: (kind: ImageEffectKind) => void;
   onCopyStyle: () => void;
   onPasteStyle: () => void;
   background: { color: string; gradient?: GradientFill };
@@ -171,10 +173,14 @@ function ShapeSection({ layer, onChange }: { layer: ShapeLayer; onChange: Props[
   );
 }
 
-function ImageStyleSection({ layer, onChange, aiBusy, onRemoveBackground }: { layer: ImageLayer; onChange: Props["onChange"]; aiBusy: string | null; onRemoveBackground: () => void }) {
+function ImageStyleSection({ layer, onChange, aiBusy, onRemoveBackground, onImageEffect }: { layer: ImageLayer; onChange: Props["onChange"]; aiBusy: string | null; onRemoveBackground: () => void; onImageEffect: (kind: ImageEffectKind) => void }) {
   return (
     <PanelSection title="모양" label="이미지 모양">
       <div className="panel-fields">
+        <div className="chip-row" role="group" aria-label="이미지 뒤집기">
+          <button type="button" className={layer.flipX ? "active" : ""} aria-pressed={!!layer.flipX} onClick={() => onChange({ flipX: !layer.flipX })}>↔ 좌우 뒤집기</button>
+          <button type="button" className={layer.flipY ? "active" : ""} aria-pressed={!!layer.flipY} onClick={() => onChange({ flipY: !layer.flipY })}>↕ 상하 뒤집기</button>
+        </div>
         <div className="field-group">
           <span className="field-label">모양으로 오리기</span>
           <div className="chip-row" role="group" aria-label="이미지 모양">
@@ -191,6 +197,17 @@ function ImageStyleSection({ layer, onChange, aiBusy, onRemoveBackground }: { la
             <input type="range" min="0" max="60" value={layer.borderWidth ?? 0} onChange={(e) => onChange({ borderWidth: Number(e.target.value) }, "image-border-w")} aria-label="테두리 두께" /><output>{layer.borderWidth ?? 0}</output></div></label>
         <button type="button" className="btn ai-btn" disabled={!!aiBusy} onClick={onRemoveBackground}>{aiBusy ?? "✨ AI 배경 제거"}</button>
         <p className="panel-hint">사람 사진에서 배경을 지워 투명하게 만들어요. 처음 한 번 모델(약 25MB)을 내려받고, 사진은 서버로 보내지 않습니다. Ctrl+Z로 되돌릴 수 있어요.</p>
+        <button type="button" className="btn" disabled={!!aiBusy} onClick={() => onImageEffect("blur-bg")}>✨ AI 배경 흐리게 (인물 모드)</button>
+        <div className="field-group">
+          <span className="field-label">스티커 외곽선 (투명 배경 PNG에 잘 어울려요)</span>
+          <div className="chip-row" role="group" aria-label="스티커 외곽선">
+            <button type="button" disabled={!!aiBusy} onClick={() => onImageEffect("outline-thin")}>얇게</button>
+            <button type="button" disabled={!!aiBusy} onClick={() => onImageEffect("outline")}>보통</button>
+            <button type="button" disabled={!!aiBusy} onClick={() => onImageEffect("outline-thick")}>두껍게</button>
+          </div>
+        </div>
+        <button type="button" className="btn" disabled={!!aiBusy} onClick={() => onImageEffect("sky")}>☁ 하늘 제거 (간이)</button>
+        <p className="panel-hint">하늘 제거는 AI가 아니라 색으로 찾는 간이 방식이라 맑은·흐린 낮 하늘 사진에 적합해요(노을·밤하늘은 부정확). 지운 뒤 뒤에 그라디언트 도형을 깔아 새 하늘을 만들어 보세요.</p>
       </div>
     </PanelSection>
   );
@@ -279,7 +296,7 @@ function ImageAdjustSection({ layer, onChange, onCompareOriginal }: { layer: Ima
   );
 }
 
-export function PropertiesPanel({ layer, canvasSize, isCropMode, onToggleCropMode, canPasteStyle, aiBusy, onRemoveBackground, onCopyStyle, onPasteStyle, background, slideCount, onBackgroundChange, onApplyBackgroundToAll, onCompareOriginal, onAlign, onChange, onDuplicate, onDelete }: Props) {
+export function PropertiesPanel({ layer, canvasSize, isCropMode, onToggleCropMode, canPasteStyle, aiBusy, onRemoveBackground, onImageEffect, onCopyStyle, onPasteStyle, background, slideCount, onBackgroundChange, onApplyBackgroundToAll, onCompareOriginal, onAlign, onChange, onDuplicate, onDelete }: Props) {
   if (!layer) {
     return (
       <aside className="properties-panel" aria-label="속성">
@@ -307,7 +324,7 @@ export function PropertiesPanel({ layer, canvasSize, isCropMode, onToggleCropMod
       )}
       {layer.type === "image" && <ImageCropSection layer={layer} canvasSize={canvasSize} isCropMode={isCropMode} onToggleCropMode={onToggleCropMode} onChange={onChange} />}
       {layer.type === "shape" && <ShapeSection layer={layer} onChange={onChange} />}
-      {layer.type === "image" && <ImageStyleSection layer={layer} onChange={onChange} aiBusy={aiBusy} onRemoveBackground={onRemoveBackground} />}
+      {layer.type === "image" && <ImageStyleSection layer={layer} onChange={onChange} aiBusy={aiBusy} onRemoveBackground={onRemoveBackground} onImageEffect={onImageEffect} />}
       {layer.type === "image" && <ImageAdjustSection key={layer.id} layer={layer} onChange={onChange} onCompareOriginal={onCompareOriginal} />}
 
       <PanelSection title="공통" label="공통 속성">

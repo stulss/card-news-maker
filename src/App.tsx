@@ -19,9 +19,14 @@ import type { ShapeKind } from "./features/design/shapeOptions";
 import { TextPanel } from "./components/text/TextPanel";
 import { WelcomeCard } from "./components/welcome/WelcomeCard";
 import { SizeDialog } from "./components/size/SizeDialog";
+import { AboutDialog } from "./components/about/AboutDialog";
+import { MAX_PROJECT_BYTES, ProjectFileError, createProjectFileName, parseProject, serializeProject } from "./features/project/projectFile";
 import { HistoryPanel } from "./components/history/HistoryPanel";
 import { STICKER_PACKS, instantiateSticker } from "./features/design/stickerPacks";
-import { AI_MODEL_NOTICE, removeBackground } from "./features/ai/removeBackground";
+import { AI_MODEL_NOTICE, blurBackground, removeBackground } from "./features/ai/removeBackground";
+import { addStickerOutline, removeSky } from "./features/design/imageEffects";
+import type { ImageEffectKind } from "./features/design/imageEffects";
+import { slideToSvg, svgToDataUrl } from "./features/export/svgExport";
 import { OVERLAY_OPTIONS, buildOverlay } from "./features/design/overlays";
 import type { OverlayKind } from "./features/design/overlays";
 import { createGalleryTemplates } from "./features/template/galleryTemplates";
@@ -96,6 +101,8 @@ function App() {
   const [autosaveReady, setAutosaveReady] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isSizeOpen, setIsSizeOpen] = useState(false);
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
+  const projectInputRef = useRef<HTMLInputElement>(null);
   const [aiStatus, setAiStatus] = useState<string | null>(null);
   const aiConfirmed = useRef(false);
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
@@ -153,8 +160,10 @@ function App() {
       const key = event.key.toLowerCase();
       // 명령 팔레트는 입력창에 포커스가 있어도 열리고 닫힌다.
       if (mod && key === "k") { event.preventDefault(); setIsPaletteOpen((open) => !open); return; }
+      if (mod && key === "s") { event.preventDefault(); handleSaveProject(); return; }
+      if (mod && key === "o") { event.preventDefault(); projectInputRef.current?.click(); return; }
       if (target && (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))) return;
-      if (isExportOpen || isHelpOpen || isPaletteOpen || isSizeOpen) return; // 창이 열려 있는 동안 캔버스 단축키는 막는다
+      if (isExportOpen || isHelpOpen || isPaletteOpen || isSizeOpen || isAboutOpen) return; // 창이 열려 있는 동안 캔버스 단축키는 막는다
       if (mod && key === "e") { event.preventDefault(); setIsExportOpen(true); return; }
       if (key === "pageup" || key === "pagedown") { event.preventDefault(); selectSlide(Math.min(deck.slides.length - 1, Math.max(0, deck.active + (key === "pagedown" ? 1 : -1)))); return; }
       if ((mod && key === "/") || event.key === "?") { event.preventDefault(); setIsHelpOpen(true); return; }
@@ -310,26 +319,43 @@ function App() {
     setIsMobileSidebarOpen(false);
   }
 
-  // AI 배경 제거: 선택한 이미지의 원본을 배경이 투명한 PNG로 바꾼다(Ctrl+Z로 되돌릴 수 있다). 모델 내려받기 전에 한 번 동의를 받는다.
-  async function handleRemoveBackground() {
+  // 선택한 이미지의 원본을 새 PNG로 바꾸는 작업(AI 배경 제거·흐리게, 외곽선, 하늘 제거). Ctrl+Z로 되돌릴 수 있다.
+  // AI 작업은 모델 파일을 내려받기 전에 한 번 동의를 받는다.
+  async function runImageTask(needsAi: boolean, task: (src: string, report: (message: string) => void) => Promise<string>, done: string, extra: Partial<ImageLayer> = {}) {
     if (!selectedLayer || selectedLayer.type !== "image" || aiStatus) return;
-    if (!aiConfirmed.current) {
+    if (needsAi && !aiConfirmed.current) {
       if (!window.confirm(AI_MODEL_NOTICE)) return;
       aiConfirmed.current = true;
     }
     const target = selectedLayer;
     setErrorMessage(null);
+    setAiStatus("처리 중…");
     try {
-      const dataUrl = await removeBackground(target.src, setAiStatus);
-      updateLayer(target.id, { src: dataUrl, maskShape: undefined });
-      setStatusMessage("배경을 지웠습니다. 마음에 들지 않으면 Ctrl+Z로 되돌리세요.");
+      const dataUrl = await task(target.src, setAiStatus);
+      updateLayer(target.id, { src: dataUrl, ...extra });
+      setStatusMessage(done);
     } catch (error) {
-      console.error("Background removal failed", error);
-      aiConfirmed.current = true;
-      setErrorMessage(`AI 배경 제거에 실패했습니다: ${error instanceof Error ? error.message : "알 수 없는 오류"} (네트워크 연결과 브라우저를 확인해 주세요)`);
+      console.error("Image task failed", error);
+      setErrorMessage(`이미지 효과를 적용하지 못했습니다: ${error instanceof Error ? error.message : "알 수 없는 오류"}${needsAi ? " (네트워크 연결과 브라우저를 확인해 주세요)" : ""}`);
     } finally {
       setAiStatus(null);
     }
+  }
+
+  const handleRemoveBackground = () => runImageTask(true, removeBackground, "배경을 지웠습니다. 마음에 들지 않으면 Ctrl+Z로 되돌리세요.", { maskShape: undefined });
+
+  function handleImageEffect(kind: ImageEffectKind) {
+    if (kind === "blur-bg") return runImageTask(true, (src, report) => blurBackground(src, report), "배경을 흐리게 했습니다. 마음에 들지 않으면 Ctrl+Z로 되돌리세요.");
+    if (kind === "sky") {
+      return runImageTask(false, async (src, report) => {
+        report("하늘을 찾는 중…");
+        const { dataUrl, coverage } = await removeSky(src);
+        if (coverage < 0.02) throw new Error("하늘로 보이는 영역을 찾지 못했습니다(위쪽이 맑은·흐린 낮 하늘인 사진에서 동작해요).");
+        return dataUrl;
+      }, "하늘을 지웠습니다. 뒤에 색이나 그라디언트 도형을 깔아 새 하늘을 만들어 보세요.");
+    }
+    const ratio = kind === "outline-thin" ? 0.012 : kind === "outline" ? 0.022 : 0.036;
+    return runImageTask(false, (src) => addStickerOutline(src, ratio), "스티커 외곽선을 넣었습니다. 투명 배경(PNG) 이미지에서 가장 잘 보여요.");
   }
 
   function handleAddTextPreset(presetId: string) {
@@ -638,9 +664,11 @@ function App() {
 
   // 내보내기 창: 캔버스를 PNG로 뽑은 뒤 워터마크·형식·품질을 적용한다(미리보기와 다운로드가 같은 경로).
   const pageRef = useRef({ index: 0, total: 1 });
-  useEffect(() => { pageRef.current = { index: deck.active, total: deck.slides.length }; });
+  const slideRef = useRef(project);
+  useEffect(() => { pageRef.current = { index: deck.active, total: deck.slides.length }; slideRef.current = project; });
 
   const renderExportData = useCallback(async (settings: ExportSettings) => {
+    if (settings.format === "svg") return svgToDataUrl(await slideToSvg(slideRef.current)); // 미리보기·현재 장 SVG
     const stage = canvasStageRef.current;
     if (!stage) throw new Error("캔버스를 아직 렌더링하지 못했습니다.");
     return renderExport(stage.toDataUrl("png", 1, settings.scale), settings, pageRef.current);
@@ -661,6 +689,17 @@ function App() {
   async function renderSlideFiles(settings: ExportSettings, scope: ExportScope) {
     const total = deck.slides.length;
     const ext = settings.format;
+    if (ext === "svg") {
+      // SVG는 화면을 캡처하지 않고 슬라이드 데이터에서 바로 만든다.
+      const indices = scope === "current" || total === 1 ? [deck.active] : deck.slides.map((_, index) => index);
+      const encoder = new TextEncoder();
+      const out: Array<{ name: string; dataUrl: string; bytes: Uint8Array | null }> = [];
+      for (const index of indices) {
+        const svg = await slideToSvg(deck.slides[index]);
+        out.push({ name: indices.length === 1 ? createExportFileName("svg") : `${String(index + 1).padStart(2, "0")}.svg`, dataUrl: svgToDataUrl(svg), bytes: encoder.encode(svg) });
+      }
+      return out;
+    }
     if (scope === "current" || total === 1) {
       return [{ name: createExportFileName(ext), dataUrl: await renderExportData(settings), bytes: null as Uint8Array | null }];
     }
@@ -695,7 +734,7 @@ function App() {
         downloadDataUrl(files[0].dataUrl, files[0].name);
         setStatusMessage(`${settings.format.toUpperCase()} 파일로 내보냈습니다.`);
       } else {
-        const zip = createZip(files.map((file) => ({ name: file.name, data: dataUrlToBytes(file.dataUrl) })));
+        const zip = createZip(files.map((file) => ({ name: file.name, data: file.bytes ?? dataUrlToBytes(file.dataUrl) })));
         const url = URL.createObjectURL(zip);
         downloadDataUrl(url, createExportFileName("zip"));
         window.setTimeout(() => URL.revokeObjectURL(url), 10000);
@@ -713,8 +752,8 @@ function App() {
     setIsExportOpen(false);
     try {
       const files = await renderSlideFiles(settings, scope);
-      const mime = settings.format === "png" ? "image/png" : settings.format === "jpg" ? "image/jpeg" : "image/webp";
-      const shareFiles = files.map((file, index) => new File([dataUrlToBytes(file.dataUrl) as BlobPart], files.length === 1 ? file.name : `${String(index + 1).padStart(2, "0")}.${settings.format}`, { type: mime }));
+      const mime = settings.format === "png" ? "image/png" : settings.format === "jpg" ? "image/jpeg" : settings.format === "svg" ? "image/svg+xml" : "image/webp";
+      const shareFiles = files.map((file, index) => new File([(file.bytes ?? dataUrlToBytes(file.dataUrl)) as BlobPart], files.length === 1 ? file.name : `${String(index + 1).padStart(2, "0")}.${settings.format}`, { type: mime }));
       if (!navigator.canShare?.({ files: shareFiles })) throw new Error("이 기기는 파일 공유를 지원하지 않습니다. ZIP/이미지를 내려받아 인스타그램 앱에서 선택해 주세요.");
       await navigator.share({ files: shareFiles, text: caption || undefined });
       setStatusMessage("공유 창을 열었습니다. 인스타그램을 선택해 게시물을 이어서 작성하세요.");
@@ -775,6 +814,39 @@ function App() {
 
   function handleSetCanvasSize(width: number, height: number) {
     setDeck((current) => withCanvasSize(current, width, height));
+  }
+
+  // 프로젝트 파일(.cardnews.json): 모든 슬라이드·사진을 내 컴퓨터에 저장하고 다시 열어 이어서 작업한다.
+  async function handleSaveProject() {
+    try {
+      const text = await serializeProject(deck);
+      const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+      downloadDataUrl(url, createProjectFileName());
+      window.setTimeout(() => URL.revokeObjectURL(url), 10000);
+      setErrorMessage(null);
+      setStatusMessage("프로젝트를 파일로 저장했습니다. 나중에 ‘프로젝트 열기’(Ctrl+O)로 이어서 작업할 수 있어요.");
+    } catch (error) {
+      console.error("Project save failed", error);
+      setErrorMessage("프로젝트를 저장하지 못했습니다. 사진이 너무 크지 않은지 확인하고 다시 시도해 주세요.");
+    }
+  }
+
+  async function handleProjectFileSelected(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    try {
+      if (file.size > MAX_PROJECT_BYTES) throw new ProjectFileError("프로젝트 파일이 너무 큽니다(300MB 초과).");
+      const opened = parseProject(await file.text());
+      if (!window.confirm(`현재 작업을 “${file.name}”의 내용(${opened.slides.length}장)으로 바꿀까요?\n\n지금 작업은 사라지고 실행 취소 기록도 비워집니다. 필요하면 먼저 ‘프로젝트 저장’을 해 두세요.`)) return;
+      replaceDeck(opened);
+      setSelectedLayerId(null);
+      setCropTargetId(null);
+      setErrorMessage(null);
+      setStatusMessage(`프로젝트를 열었습니다(${opened.slides.length}장).`);
+    } catch (error) {
+      setErrorMessage(error instanceof ProjectFileError ? error.message : "프로젝트 파일을 열지 못했습니다.");
+    }
   }
 
   function handleNewDeck() {
@@ -850,6 +922,9 @@ function App() {
       { id: "slide-prev", group: "슬라이드", label: "이전 슬라이드", shortcut: "PageUp", run: () => selectSlide(Math.max(0, deck.active - 1)) },
       { id: "slide-next", group: "슬라이드", label: "다음 슬라이드", shortcut: "PageDown", run: () => selectSlide(Math.min(deck.slides.length - 1, deck.active + 1)) },
       { id: "ig-guide", group: "보기", label: igGuide ? "인스타 안전영역 가이드 끄기" : "인스타 안전영역 가이드 켜기", keywords: "instagram 인스타 safe zone 그리드", run: () => setIgGuide((on) => !on) },
+      { id: "save-project", group: "파일", label: "프로젝트 저장 (.cardnews.json)", shortcut: "Ctrl+S", keywords: "save 저장 백업 파일", run: handleSaveProject },
+      { id: "open-project", group: "파일", label: "프로젝트 열기…", shortcut: "Ctrl+O", keywords: "open 열기 불러오기", run: () => projectInputRef.current?.click() },
+      { id: "about", group: "도움말", label: "메뉴·정보 (개인정보·약관·데이터 관리)", keywords: "about 정보 개인정보 약관 라이선스 데이터 삭제", run: () => setIsAboutOpen(true) },
       { id: "new-deck", group: "파일", label: "새로 시작 (현재 작업 지우기)", keywords: "reset new 초기화", run: handleNewDeck },
       { id: "grid", group: "보기", label: `구도 격자: ${GRID_LABELS[nextGrid]}으로 전환`, shortcut: "Shift+G", keywords: "grid thirds 3분할 구도 격자", run: cycleGrid },
       { id: "rulers", group: "보기", label: rulersVisible ? "눈금자 끄기" : "눈금자 켜기", shortcut: "Shift+R", keywords: "ruler 가이드", run: () => setRulersVisible((visible) => !visible) },
@@ -862,7 +937,12 @@ function App() {
     if (hasSelection) {
       list.push(
         { id: "duplicate", group: "선택 레이어", label: "복제", shortcut: "Ctrl+D", run: handleDuplicateLayer },
-        ...(selectedLayer.type === "image" ? [{ id: "ai-remove-bg", group: "선택 레이어", label: "AI 배경 제거 (사람 사진)", keywords: "ai 배경 제거 누끼 remove background", run: handleRemoveBackground } as Command] : []),
+        ...(selectedLayer.type === "image" ? [{ id: "ai-remove-bg", group: "선택 레이어", label: "AI 배경 제거 (사람 사진)", keywords: "ai 배경 제거 누끼 remove background", run: handleRemoveBackground } as Command,
+          { id: "ai-blur-bg", group: "선택 레이어", label: "AI 배경 흐리게 (인물 모드)", keywords: "ai blur background 아웃포커스", run: () => handleImageEffect("blur-bg") } as Command,
+          { id: "sticker-outline", group: "선택 레이어", label: "스티커 외곽선 넣기", keywords: "outline sticker 스티커 테두리", run: () => handleImageEffect("outline") } as Command,
+          { id: "remove-sky", group: "선택 레이어", label: "하늘 제거 (간이)", keywords: "sky 하늘", run: () => handleImageEffect("sky") } as Command,
+          { id: "flip-x", group: "선택 레이어", label: "이미지 좌우 뒤집기", keywords: "flip mirror 거울", run: () => updateLayer(selectedLayer.id, { flipX: !selectedLayer.flipX }) } as Command,
+          { id: "flip-y", group: "선택 레이어", label: "이미지 상하 뒤집기", keywords: "flip 반전", run: () => updateLayer(selectedLayer.id, { flipY: !selectedLayer.flipY }) } as Command] : []),
         { id: "copy-style", group: "선택 레이어", label: "스타일 복사", keywords: "style graphic 그래픽 스타일", run: handleCopyStyle },
         ...(styleClipboard ? [{ id: "paste-style", group: "선택 레이어", label: "스타일 붙여넣기", keywords: "style graphic 그래픽 스타일", run: handlePasteStyle } as Command] : []),
         { id: "delete", group: "선택 레이어", label: "삭제", shortcut: "Delete", run: () => handleDeleteLayer(selectedLayer.id) },
@@ -907,7 +987,7 @@ function App() {
     <div className="app-shell">
       <header className="topbar">
         <div className="topbar-group">
-          <div className="app-brand"><span className="brand-mark" aria-hidden="true" />카드뉴스 메이커</div>
+          <div className="app-brand"><span className="brand-mark" aria-hidden="true" />카드툰</div>
           <div className="history-buttons" role="group" aria-label="실행 취소">
             <button type="button" onClick={undo} disabled={!canUndo} title="실행 취소 (Ctrl+Z)" aria-label="실행 취소">↶</button>
             <button type="button" onClick={redo} disabled={!canRedo} title="다시 실행 (Ctrl+Shift+Z)" aria-label="다시 실행">↷</button>
@@ -939,12 +1019,14 @@ function App() {
           <button type="button" className={`btn ig-toggle ${igGuide ? "active" : ""}`} aria-pressed={igGuide} onClick={() => setIgGuide((on) => !on)} title="인스타그램 안전영역 가이드 (스토리 UI 영역·프로필 그리드 잘림)">IG</button>
           <button type="button" className={`btn icon-only ${rulersVisible ? "active" : ""}`} aria-pressed={rulersVisible} onClick={() => setRulersVisible((v) => !v)} title="눈금자 (Shift+R)" aria-label="눈금자 켜기/끄기">📏</button>
           <button type="button" className="btn icon-only" onClick={() => setIsPaletteOpen(true)} title="명령 팔레트 (Ctrl+K)" aria-label="명령 팔레트">⌕</button>
+          <button type="button" className="btn icon-only" onClick={() => setIsAboutOpen(true)} title="메뉴·정보 (프로젝트 저장·열기, 데이터 관리, 약관)" aria-label="메뉴 및 정보">☰</button>
           <button type="button" className="btn icon-only desktop-only" onClick={() => setIsHelpOpen(true)} title="단축키 도움말 (?)" aria-label="단축키 도움말">⌨</button>
           <button type="button" className="btn desktop-only" onClick={() => setIsExportOpen(true)} title="내보내기 (Ctrl+E)">내보내기…</button>
           <button type="button" className="btn primary desktop-only" onClick={() => handleDownload("png")}>PNG 다운로드</button>
           <button type="button" className="btn primary mobile-only" onClick={() => setIsExportOpen(true)}>저장</button>
         </div>
 
+        <input ref={projectInputRef} type="file" accept=".json,application/json" hidden onChange={handleProjectFileSelected} />
         <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={handleFileSelected} />
       </header>
 
@@ -1022,7 +1104,7 @@ function App() {
             <span className="sheet-summary">{selectedLayer ? `속성 · ${selectedLayer.name}` : "레이어를 선택하세요"}</span>
             <span aria-hidden="true">{isStyleSheetOpen ? "⌄" : "⌃"}</span>
           </button>
-          <PropertiesPanel layer={selectedLayer} aiBusy={aiStatus} onRemoveBackground={handleRemoveBackground} canPasteStyle={!!styleClipboard} onCopyStyle={handleCopyStyle} onPasteStyle={handlePasteStyle} background={{ color: project.backgroundColor, gradient: project.backgroundGradient }} slideCount={deck.slides.length} onBackgroundChange={handleBackgroundChange} onApplyBackgroundToAll={handleApplyBackgroundToAll} isCropMode={!!cropLayerId} onToggleCropMode={() => setCropTargetId(cropLayerId ? null : selectedLayer?.id ?? null)} onCompareOriginal={setIsComparingOriginal} onAlign={handleAlign} canvasSize={{ width: project.width, height: project.height }} onChange={(changes, key) => { if (selectedLayer) updateLayer(selectedLayer.id, changes, key); }}
+          <PropertiesPanel layer={selectedLayer} aiBusy={aiStatus} onRemoveBackground={handleRemoveBackground} onImageEffect={handleImageEffect} canPasteStyle={!!styleClipboard} onCopyStyle={handleCopyStyle} onPasteStyle={handlePasteStyle} background={{ color: project.backgroundColor, gradient: project.backgroundGradient }} slideCount={deck.slides.length} onBackgroundChange={handleBackgroundChange} onApplyBackgroundToAll={handleApplyBackgroundToAll} isCropMode={!!cropLayerId} onToggleCropMode={() => setCropTargetId(cropLayerId ? null : selectedLayer?.id ?? null)} onCompareOriginal={setIsComparingOriginal} onAlign={handleAlign} canvasSize={{ width: project.width, height: project.height }} onChange={(changes, key) => { if (selectedLayer) updateLayer(selectedLayer.id, changes, key); }}
             onDuplicate={handleDuplicateLayer} onDelete={() => { if (selectedLayer) handleDeleteLayer(selectedLayer.id); }} />
         </div>
       </main>
@@ -1037,6 +1119,7 @@ function App() {
           <div className="modal progress-modal"><strong>슬라이드 내보내는 중…</strong><span>{exportProgress.done + 1} / {exportProgress.total}</span><div className="progress-bar"><div style={{ width: `${((exportProgress.done + 1) / exportProgress.total) * 100}%` }} /></div></div>
         </div>
       )}
+      {isAboutOpen && <AboutDialog onClose={() => setIsAboutOpen(false)} onSaveProject={handleSaveProject} onOpenProject={() => projectInputRef.current?.click()} onNewDeck={handleNewDeck} onShowShortcuts={() => setIsHelpOpen(true)} />}
       {isSizeOpen && <SizeDialog width={project.width} height={project.height} onApply={handleSetCanvasSize} onClose={() => setIsSizeOpen(false)} />}
       {isHelpOpen && <ShortcutHelp onClose={() => setIsHelpOpen(false)} />}
       {isPaletteOpen && <CommandPalette commands={buildCommands()} onClose={() => setIsPaletteOpen(false)} />}

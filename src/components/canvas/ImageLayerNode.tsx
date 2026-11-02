@@ -110,6 +110,10 @@ export function ImageLayerNode({ layer, cropMode = false, ignoreFilters = false,
       width={layer.width}
       height={layer.height}
       rotation={layer.rotation}
+      scaleX={layer.flipX ? -1 : 1}
+      scaleY={layer.flipY ? -1 : 1}
+      offsetX={layer.flipX ? layer.width : 0}
+      offsetY={layer.flipY ? layer.height : 0}
       visible={layer.visible}
       opacity={layer.opacity ?? 1}
       cornerRadius={masked ? 0 : layer.cornerRadius ?? 0}

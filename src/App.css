@@ -398,3 +398,23 @@ kbd { padding: 2px 7px; border: 1px solid var(--color-border); border-radius: 6p
 .pack-name { font-size: 11px; color: var(--color-text-muted); }
 .ai-btn { background: var(--gradient-accent); border-color: transparent; color: #fff; font-weight: 600; }
 .ai-btn:disabled { opacity: 0.7; cursor: progress; }
+
+/* 곡선 글자 안내 */
+.panel-fields label small.panel-hint { display: block; margin-top: 2px; }
+
+/* 메뉴·정보 대화상자 */
+.about-dialog { width: min(560px, 100%); }
+.about-body { display: flex; flex-direction: column; gap: 20px; }
+.about-body h3 { margin: 0 0 6px; color: var(--color-text-dim); font-size: 11px; letter-spacing: 0.06em; }
+.about-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.about-actions kbd { margin-left: 6px; }
+.about-links { margin: 0 0 8px; padding-left: 18px; font-size: 13px; }
+.about-links a { color: var(--color-accent-soft); }
+.danger-btn { border-color: oklch(0.55 0.17 25); color: oklch(0.78 0.15 25); }
+.danger-btn:hover:not(:disabled) { background: oklch(0.55 0.17 25 / 0.15); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; } }
+
+/* 오류 복구 화면 */
+.error-boundary { max-width: 440px; margin: 15vh auto 0; padding: 24px; text-align: center; color: var(--color-text, #ece9f6); }
+.error-boundary h1 { font-size: 22px; margin: 0 0 8px; }
+.error-boundary-detail { font-size: 12px; opacity: 0.6; word-break: break-word; }
