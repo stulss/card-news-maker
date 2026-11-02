@@ -20,7 +20,7 @@
 | `docs/10_AI_배경제거와_고급편집.md` | AI 배경 제거·이력 패널·이미지 오리기·스티커 팩 |
 | `docs/09_디자인_가이드.md` | 디자인 시스템·그래픽 도구·구현 메모 |
 | `docs/08_인스타그램_사용가이드.md` | 인스타 규격·작업 순서·업로드 방법·한계 |
-| `PRD.md` | 개발요청서 50장(48-1·48-2 포함). 기능 요구사항·화면 설계·데이터 구조(43·44장 야구/백엔드는 폐기, 45장이 2차 기능) |
+| `PRD.md` | 개발요청서 52장(48-1·48-2 포함). 기능 요구사항·화면 설계·데이터 구조(43·44장 야구/백엔드는 폐기, 45장이 2차 기능) |
 | `CLAUDE.md` | AI가 폴더를 통째로 읽지 않도록 하는 토큰 절약 규칙 |
 | `AGENTS.md` / `GEMINI.md` | Codex·Antigravity 프로젝트 진입 지침 |
 | `docs/01_기획.md` | 구현된 아키텍처·기술 선택 요약 |
@@ -57,30 +57,41 @@
 
 ```text
 card-news-maker/
-├── PRD.md                       # 개발요청서 50장
+├── PRD.md                       # 개발요청서 52장
 ├── CLAUDE.md                    # AI 작업 규칙
 ├── AGENTS.md / GEMINI.md        # Codex / Antigravity 진입 지침
 ├── README.md
+├── CHANGELOG.md                 # 버전별 변경 이력 (현재 v1.1.0)
 ├── 작업내역_체크리스트.md         # 진행 상황·결정 기록
-├── docs/                        # 기획·배포·검증·제출 보고서·증거 자료·`07_레퍼런스_분석.md`
+├── docs/                        # 기획·배포·검증·제출 보고서·증거 자료·`07_레퍼런스_분석.md`·`11_상용화_체크리스트.md`
 ├── design/                      # 화면 시안 4장 + canvas.json (구현 완료 후 참고용, 코드는 이미 별도)
+├── public/                      # favicon·PWA(manifest·sw.js·아이콘)·robots.txt·legal/(개인정보·약관·라이선스 고지)
+├── scripts/                     # generate-notices(라이선스 게이트)·serve-dist(운영 헤더 로컬 서빙)·make-icons
+├── e2e/                         # Playwright 스모크 테스트(운영 빌드 + CSP)
+├── .github/workflows/ci.yml     # CI: lint·tsc·라이선스·단위·감사·빌드·e2e
+├── vercel.json                  # 보안 헤더(CSP 등)
 ├── index.html
-├── vite.config.ts
+├── vite.config.ts / vitest.config.mjs / playwright.config.ts
 ├── tsconfig*.json                # app / node 두 프로젝트로 분리
 └── src/
+    ├── __tests__/               # Vitest 단위 테스트
+    ├── fonts.ts                 # 자체 호스팅 글꼴(@fontsource) 불러오기
     ├── main.tsx
     ├── App.tsx                  # 편집기 셸 (상단바·도구 레일·밈/템플릿/레이어 서랍·속성 패널·단축키)
     ├── index.css                # 2차 디자인 토큰(인디고 + 바이올렛→핑크 그라디언트)
     ├── components/canvas/       # CanvasStage(렌더링·스냅·줌), ImageLayerNode(보정·자르기), Rulers(눈금자)
     ├── components/editor/       # PropertiesPanel(공통 투명도·이미지 보정), TextStylePanel
     ├── components/layer/        # LayerPanel
-    ├── components/template/     # TemplatePanel(내 템플릿), GalleryPanel(갤러리)(내 템플릿), GalleryPanel(갤러리)
+    ├── components/template/     # TemplatePanel(내 템플릿), GalleryPanel(갤러리)
+    ├── components/brand/        # BrandPanel — 브랜드 키트(색·글꼴)
+    ├── components/elements/     # ElementsPanel — QR 코드·차트
+    ├── components/about/        # AboutDialog — 메뉴·프로젝트 저장/열기·데이터 삭제·법적 고지
     ├── components/history/      # HistoryPanel — 작업 이력
     ├── components/size/         # SizeDialog — 캔버스 크기 프리셋·직접 입력
     ├── components/welcome/      # WelcomeCard — 빈 작업 시작 카드
     ├── components/text/         # TextPanel — 텍스트 스타일 프리셋
     ├── components/slides/       # SlideStrip — 슬라이드 목록
-    ├── components/common/       # LayerThumb — 갤러리·슬라이드 공용 썸네일
+    ├── components/common/       # LayerThumb(공용 썸네일), ErrorBoundary(오류 복구), useModalFocus(포커스 가두기)
     ├── components/shape/        # ShapePanel — 도형 추가
     ├── components/export/       # ExportDialog — 형식·품질·크기·워터마크
     ├── components/command/      # CommandPalette — Ctrl+K
@@ -92,8 +103,11 @@ card-news-maker/
     ├── features/autosave/       # deckStore — IndexedDB 자동 저장·복원
     ├── features/export/         # exportImage(워터마크·페이지 번호), svgExport(벡터), zip, downloadCanvas
     ├── features/image/          # loadImageFile — F-01 형식·용량 검증
-    ├── features/export/         # downloadCanvas — PNG/JPG 내보내기
-    ├── features/template/       # templateStore — CRUD·JSON 가져오기/내보내기
+    ├── features/template/       # templateStore(CRUD·JSON 검증), galleryTemplates(갤러리 42종)
+    ├── features/brand/          # brandStore(색·글꼴 저장·팔레트 추출), imagePalette(사진 색 뽑기·스포이드)
+    ├── features/elements/       # qr(QR 생성), chart(차트 데이터 파싱·렌더)
+    ├── features/project/        # projectFile — .cardnews.json 저장/열기·검증
+    ├── features/privacy/        # clearData — 저장된 모든 데이터 지우기
     ├── features/history/        # useProjectHistory — 실행 취소/다시 실행(연속 변경 병합)
     ├── features/layer/          # groups — 그룹 정규화·멤버 조회
     ├── features/sticker/        # stickerStore — 내 스티커 저장
@@ -116,7 +130,7 @@ card-news-maker/
 | 이모지 스티커 | 24종, 크기·회전 가능 |
 | 줌/패닝 | Ctrl+휠 또는 우하단 ± 버튼(25~400%), 확대 시 스크롤로 이동 |
 | 텍스트 그림자 | 색·번짐·가로/세로 오프셋 |
-| 템플릿 갤러리 | 카드뉴스·밈·공지·SNS 20종, 클릭하면 캔버스 교체(실행 취소 가능) |
+| 템플릿 갤러리 | 카드뉴스·밈·공지·SNS 42종, 클릭하면 캔버스 교체(실행 취소 가능) |
 | 레이어 정렬 | 레이어 목록에서 ⋮⋮ 손잡이를 끌어 순서 변경(마우스·터치, ▲▼ 버튼도 가능) |
 | 이미지 자르기 | 비율 버튼(1:1·4:5·16:9·9:16·캔버스) + 확대 100~500% + 가로/세로 위치 슬라이더 |
 | 직접 자르기 | 속성 패널에서 자르기 모드 → 이미지를 끌어 위치, 휠로 확대 |
