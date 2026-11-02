@@ -1,4 +1,5 @@
 import { BLEND_MODES } from "../../types/canvas";
+import { useState } from "react";
 import type { BlendMode, ImageFilters, ImageLayer, Layer, ShapeLayer, TextLayer } from "../../types/canvas";
 import { TextStylePanel } from "./TextStylePanel";
 
@@ -40,9 +41,29 @@ const FILTER_PRESETS: Array<{ label: string; filters: ImageFilters }> = [
   { label: "흑백", filters: { grayscale: true } },
   { label: "세피아", filters: { sepia: true } },
   { label: "선명", filters: { contrast: 25, brightness: 0.05 } },
+  { label: "선명 컬러", filters: { saturation: 0.4, contrast: 20 } },
   { label: "어둡게", filters: { brightness: -0.3 } },
+  { label: "빈티지", filters: { sepia: true, contrast: 10, grain: 25 } },
+  { label: "차가운 톤", filters: { hue: -20, saturation: 0.15, brightness: 0.04 } },
   { label: "흐림", filters: { blur: 8 } },
 ];
+
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+// 프리셋 강도(0~200%): 숫자 값은 비례해서 키우고 줄인다. 흑백·세피아는 켜짐/꺼짐뿐이라 강도 50% 이상에서 켠다.
+function scaleFilters(filters: ImageFilters, factor: number): ImageFilters {
+  const out: ImageFilters = {};
+  if (filters.brightness !== undefined) out.brightness = clamp(filters.brightness * factor, -1, 1);
+  if (filters.contrast !== undefined) out.contrast = clamp(filters.contrast * factor, -100, 100);
+  if (filters.blur !== undefined) out.blur = clamp(filters.blur * factor, 0, 40);
+  if (filters.saturation !== undefined) out.saturation = clamp(filters.saturation * factor, -1, 1);
+  if (filters.hue !== undefined) out.hue = clamp(filters.hue * factor, -180, 180);
+  if (filters.grain !== undefined) out.grain = clamp(filters.grain * factor, 0, 100);
+  if (filters.mosaic !== undefined) out.mosaic = clamp(filters.mosaic * factor, 0, 40);
+  if (filters.grayscale && factor >= 0.5) out.grayscale = true;
+  if (filters.sepia && factor >= 0.5) out.sepia = true;
+  return out;
+}
 
 function ImageCropSection({ layer, canvasSize, isCropMode, onToggleCropMode, onChange }: { layer: ImageLayer; canvasSize: Props["canvasSize"]; isCropMode: boolean; onToggleCropMode: () => void; onChange: Props["onChange"] }) {
   const zoom = layer.cropZoom ?? 1;
@@ -105,6 +126,9 @@ function ShapeSection({ layer, onChange }: { layer: ShapeLayer; onChange: Props[
 
 function ImageAdjustSection({ layer, onChange, onCompareOriginal }: { layer: ImageLayer; onChange: Props["onChange"]; onCompareOriginal: Props["onCompareOriginal"] }) {
   const filters = layer.filters ?? {};
+  const [preset, setPreset] = useState<string | null>(null);
+  const [amount, setAmount] = useState(100);
+  const activePreset = FILTER_PRESETS.find((candidate) => candidate.label === preset && candidate.label !== "원본");
   const setFilters = (changes: ImageFilters, key?: string) => onChange({ filters: { ...filters, ...changes } }, key);
 
   return (
@@ -115,10 +139,17 @@ function ImageAdjustSection({ layer, onChange, onCompareOriginal }: { layer: Ima
         ◐ 누르는 동안 원본 보기
       </button>
       <div className="filter-presets">
-        {FILTER_PRESETS.map((preset) => (
-          <button key={preset.label} type="button" onClick={() => onChange({ filters: preset.filters })}>{preset.label}</button>
+        {FILTER_PRESETS.map((candidate) => (
+          <button key={candidate.label} type="button" className={preset === candidate.label ? "active" : ""} aria-pressed={preset === candidate.label}
+            onClick={() => { setPreset(candidate.label); setAmount(100); onChange({ filters: scaleFilters(candidate.filters, 1) }); }}>{candidate.label}</button>
         ))}
       </div>
+      {activePreset && (
+        <label className="panel-fields">
+          <span className="preset-amount-label">프리셋 강도 <output>{amount}%</output></span>
+          <input type="range" min="0" max="200" value={amount} onChange={(event) => { const next = Number(event.target.value); setAmount(next); onChange({ filters: scaleFilters(activePreset.filters, next / 100) }, "filter-preset"); }} />
+        </label>
+      )}
       <div className="panel-fields">
         <label>
           <span>밝기 <output>{Math.round((filters.brightness ?? 0) * 100)}</output></span>
@@ -178,7 +209,7 @@ export function PropertiesPanel({ layer, canvasSize, isCropMode, onToggleCropMod
       )}
       {layer.type === "image" && <ImageCropSection layer={layer} canvasSize={canvasSize} isCropMode={isCropMode} onToggleCropMode={onToggleCropMode} onChange={onChange} />}
       {layer.type === "shape" && <ShapeSection layer={layer} onChange={onChange} />}
-      {layer.type === "image" && <ImageAdjustSection layer={layer} onChange={onChange} onCompareOriginal={onCompareOriginal} />}
+      {layer.type === "image" && <ImageAdjustSection key={layer.id} layer={layer} onChange={onChange} onCompareOriginal={onCompareOriginal} />}
 
       <section className="panel-section" aria-label="공통 속성">
         <h3>공통</h3>

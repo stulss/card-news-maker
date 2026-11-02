@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CanvasStage } from "./components/canvas/CanvasStage";
 import type { CanvasStageHandle } from "./components/canvas/CanvasStage";
 import { PropertiesPanel } from "./components/editor/PropertiesPanel";
@@ -7,6 +7,13 @@ import { LayerPanel } from "./components/layer/LayerPanel";
 import { TemplatePanel } from "./components/template/TemplatePanel";
 import { GalleryPanel } from "./components/template/GalleryPanel";
 import { ShapePanel } from "./components/shape/ShapePanel";
+import { ExportDialog } from "./components/export/ExportDialog";
+import { ShortcutHelp } from "./components/help/ShortcutHelp";
+import { CommandPalette } from "./components/command/CommandPalette";
+import type { Command } from "./components/command/CommandPalette";
+import type { RulerGuide } from "./components/canvas/Rulers";
+import { loadExportSettings, renderExport, saveExportSettings } from "./features/export/exportImage";
+import type { ExportSettings } from "./features/export/exportImage";
 import type { ShapeKind } from "./components/shape/ShapePanel";
 import type { AlignMode } from "./components/editor/PropertiesPanel";
 import type { GalleryTemplate } from "./features/template/galleryTemplates";
@@ -63,6 +70,12 @@ function App() {
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
   const [cropTargetId, setCropTargetId] = useState<string | null>(null);
   const [isComparingOriginal, setIsComparingOriginal] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
+  const [exportSettings, setExportSettings] = useState<ExportSettings>(loadExportSettings);
+  const [rulersVisible, setRulersVisible] = useState(false);
+  const [rulerGuides, setRulerGuides] = useState<RulerGuide[]>([]);
   const [userStickers, setUserStickers] = useState<UserSticker[]>(loadStickers);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasStageRef = useRef<CanvasStageHandle>(null);
@@ -107,9 +120,15 @@ function App() {
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       const target = event.target as HTMLElement | null;
-      if (target && (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))) return;
       const mod = event.ctrlKey || event.metaKey;
       const key = event.key.toLowerCase();
+      // 명령 팔레트는 입력창에 포커스가 있어도 열리고 닫힌다.
+      if (mod && key === "k") { event.preventDefault(); setIsPaletteOpen((open) => !open); return; }
+      if (target && (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))) return;
+      if (isExportOpen || isHelpOpen || isPaletteOpen) return; // 창이 열려 있는 동안 캔버스 단축키는 막는다
+      if (mod && key === "e") { event.preventDefault(); setIsExportOpen(true); return; }
+      if ((mod && key === "/") || event.key === "?") { event.preventDefault(); setIsHelpOpen(true); return; }
+      if (!mod && event.shiftKey && key === "r") { event.preventDefault(); setRulersVisible((visible) => !visible); return; }
       if (mod && key === "z") { event.preventDefault(); if (event.shiftKey) redo(); else undo(); return; }
       if (mod && key === "y") { event.preventDefault(); redo(); return; }
       if (!selectedLayer) return;
@@ -450,6 +469,73 @@ function App() {
     setSelectedLayerId(newLayer.id);
   }
 
+  // 내보내기 창: 캔버스를 PNG로 뽑은 뒤 워터마크·형식·품질을 적용한다(미리보기와 다운로드가 같은 경로).
+  const renderExportData = useCallback(async (settings: ExportSettings) => {
+    const stage = canvasStageRef.current;
+    if (!stage) throw new Error("캔버스를 아직 렌더링하지 못했습니다.");
+    return renderExport(stage.toDataUrl("png", 1, settings.scale), settings);
+  }, []);
+
+  async function handleExportDownload(settings: ExportSettings) {
+    try {
+      const dataUrl = await renderExportData(settings);
+      downloadDataUrl(dataUrl, createExportFileName(settings.format));
+      saveExportSettings(settings);
+      setIsExportOpen(false);
+      setErrorMessage(null);
+      setStatusMessage(`${settings.format.toUpperCase()} 파일로 내보냈습니다.`);
+    } catch (error) {
+      console.error("Export failed", error);
+      setErrorMessage(error instanceof Error ? error.message : "내보내기에 실패했습니다.");
+    }
+  }
+
+  function handleAddGuide(axis: "x" | "y", position: number) {
+    setRulerGuides((guides) => guides.some((g) => g.axis === axis && g.position === position) ? guides : [...guides, { id: crypto.randomUUID(), axis, position }]);
+  }
+
+  function buildCommands(): Command[] {
+    const hasSelection = !!selectedLayer;
+    const list: Command[] = [
+      { id: "undo", group: "편집", label: "실행 취소", shortcut: "Ctrl+Z", keywords: "undo 되돌리기", run: undo },
+      { id: "redo", group: "편집", label: "다시 실행", shortcut: "Ctrl+Shift+Z", keywords: "redo", run: redo },
+      { id: "add-image", group: "추가", label: "이미지 추가", keywords: "사진 업로드 image", run: () => fileInputRef.current?.click() },
+      { id: "add-text", group: "추가", label: "텍스트 추가", keywords: "글자 문구 text", run: handleAddText },
+      ...(["rectangle", "rounded", "circle", "star", "triangle", "line"] as const).map((kind): Command => ({
+        id: `shape-${kind}`, group: "도형", label: `${{ rectangle: "사각형", rounded: "둥근 사각형", circle: "원", star: "별", triangle: "삼각형", line: "구분선" }[kind]} 추가`,
+        keywords: "shape 도형", run: () => handleAddShape(kind, "#8b5cf6"),
+      })),
+      ...["classic", "center", "subtitle", "bubble", "breaking"].map((presetId): Command => ({
+        id: `meme-${presetId}`, group: "밈", label: `밈 자막: ${{ classic: "클래식 상·하단", center: "중앙 한 줄", subtitle: "영화 자막", bubble: "말풍선 대사", breaking: "속보 뉴스" }[presetId]}`,
+        keywords: "meme 자막", run: () => handleApplyMemePreset(presetId),
+      })),
+      ...(([["gallery", "갤러리"], ["shapes", "도형"], ["meme", "밈·스티커"], ["templates", "내 템플릿"], ["layers", "레이어"]]) as const).map(([tab, name]): Command => ({
+        id: `tab-${tab}`, group: "패널", label: `${name} 패널 열기`, keywords: "panel tab", run: () => { setSidebarTab(tab); setIsMobileSidebarOpen(true); },
+      })),
+      ...RATIO_PRESETS.map((preset): Command => ({
+        id: `ratio-${preset.label}`, group: "캔버스", label: `화면비 ${preset.label}`, keywords: "비율 크기 ratio",
+        run: () => setProject((p) => ({ ...p, width: preset.width, height: preset.height, updatedAt: new Date().toISOString() })),
+      })),
+      { id: "rulers", group: "보기", label: rulersVisible ? "눈금자 끄기" : "눈금자 켜기", shortcut: "Shift+R", keywords: "ruler 가이드", run: () => setRulersVisible((visible) => !visible) },
+      { id: "clear-guides", group: "보기", label: "가이드선 모두 지우기", keywords: "guide", run: () => setRulerGuides([]) },
+      { id: "export", group: "내보내기", label: "내보내기 창 열기 (PNG·JPG·WebP·워터마크)", shortcut: "Ctrl+E", keywords: "export 다운로드 저장 webp 워터마크", run: () => setIsExportOpen(true) },
+      { id: "quick-png", group: "내보내기", label: "PNG로 바로 저장", keywords: "download", run: () => handleDownload("png") },
+      { id: "quick-jpg", group: "내보내기", label: "JPG로 바로 저장", keywords: "download", run: () => handleDownload("jpg") },
+      { id: "help", group: "도움말", label: "단축키 도움말", shortcut: "?", keywords: "shortcut keyboard 키보드", run: () => setIsHelpOpen(true) },
+    ];
+    if (hasSelection) {
+      list.push(
+        { id: "duplicate", group: "선택 레이어", label: "복제", shortcut: "Ctrl+D", run: handleDuplicateLayer },
+        { id: "delete", group: "선택 레이어", label: "삭제", shortcut: "Delete", run: () => handleDeleteLayer(selectedLayer.id) },
+        ...(["left", "hcenter", "right", "top", "vcenter", "bottom"] as const).map((mode): Command => ({
+          id: `align-${mode}`, group: "선택 레이어", label: `캔버스 ${{ left: "왼쪽", hcenter: "가로 가운데", right: "오른쪽", top: "위", vcenter: "세로 가운데", bottom: "아래" }[mode]} 정렬`,
+          keywords: "align 정렬 맞춤", run: () => handleAlign(mode),
+        })),
+      );
+    }
+    return list;
+  }
+
   function handleDownload(format: "png" | "jpg") {
     try {
       const dataUrl = canvasStageRef.current?.toDataUrl(format, 0.9);
@@ -506,11 +592,14 @@ function App() {
           </label>
         </div>
 
-        <div className="topbar-group desktop-only">
-          <button type="button" className="btn" onClick={() => handleDownload("jpg")}>JPG</button>
-          <button type="button" className="btn primary" onClick={() => handleDownload("png")}>PNG 다운로드</button>
+        <div className="topbar-group">
+          <button type="button" className={`btn icon-only ${rulersVisible ? "active" : ""}`} aria-pressed={rulersVisible} onClick={() => setRulersVisible((v) => !v)} title="눈금자 (Shift+R)" aria-label="눈금자 켜기/끄기">📏</button>
+          <button type="button" className="btn icon-only" onClick={() => setIsPaletteOpen(true)} title="명령 팔레트 (Ctrl+K)" aria-label="명령 팔레트">⌕</button>
+          <button type="button" className="btn icon-only desktop-only" onClick={() => setIsHelpOpen(true)} title="단축키 도움말 (?)" aria-label="단축키 도움말">⌨</button>
+          <button type="button" className="btn desktop-only" onClick={() => setIsExportOpen(true)} title="내보내기 (Ctrl+E)">내보내기…</button>
+          <button type="button" className="btn primary desktop-only" onClick={() => handleDownload("png")}>PNG 다운로드</button>
+          <button type="button" className="btn primary mobile-only" onClick={() => setIsExportOpen(true)}>저장</button>
         </div>
-        <button type="button" className="btn primary mobile-only" onClick={() => handleDownload("png")}>저장</button>
 
         <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={handleFileSelected} />
       </header>
@@ -563,7 +652,8 @@ function App() {
           )}
         </div>
 
-        <CanvasStage ref={canvasStageRef} project={project} selectedLayerId={selectedLayerId} onSelectLayer={setSelectedLayerId} onChangeLayer={updateLayer} onMoveLayers={handleMoveLayers} cropLayerId={cropLayerId} originalViewLayerId={isComparingOriginal ? selectedLayerId : null} />
+        <CanvasStage ref={canvasStageRef} project={project} selectedLayerId={selectedLayerId} onSelectLayer={setSelectedLayerId} onChangeLayer={updateLayer} onMoveLayers={handleMoveLayers} cropLayerId={cropLayerId} originalViewLayerId={isComparingOriginal ? selectedLayerId : null}
+          rulersVisible={rulersVisible} rulerGuides={rulerGuides} onAddGuide={handleAddGuide} onClearGuides={() => setRulerGuides([])} />
         {cropLayerId && (
           <div className="crop-hint" role="status">
             <span>✂ 자르기 모드 · 이미지를 끌어 위치 조정 · 마우스 휠(또는 속성 슬라이더)로 확대</span>
@@ -581,6 +671,13 @@ function App() {
             onDuplicate={handleDuplicateLayer} onDelete={() => { if (selectedLayer) handleDeleteLayer(selectedLayer.id); }} />
         </div>
       </main>
+
+      {isExportOpen && (
+        <ExportDialog settings={exportSettings} baseSize={{ width: project.width, height: project.height }} onChange={setExportSettings}
+          onClose={() => setIsExportOpen(false)} onRender={renderExportData} onDownload={handleExportDownload} />
+      )}
+      {isHelpOpen && <ShortcutHelp onClose={() => setIsHelpOpen(false)} />}
+      {isPaletteOpen && <CommandPalette commands={buildCommands()} onClose={() => setIsPaletteOpen(false)} />}
     </div>
   );
 }

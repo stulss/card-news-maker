@@ -1,4 +1,4 @@
-export type ExportFormat = "png" | "jpg";
+export type ExportFormat = "png" | "jpg" | "webp";
 
 export function createExportFileName(format: ExportFormat, now = new Date()) {
   const pad = (value: number) => String(value).padStart(2, "0");

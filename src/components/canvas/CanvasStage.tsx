@@ -1,11 +1,13 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import Konva from "konva";
-import { Stage, Layer as KonvaLayer, Rect, Ellipse, Star, RegularPolygon, Line, Text as KonvaText, Transformer } from "react-konva";
+import { Stage, Layer as KonvaLayer, Group, Rect, Ellipse, Star, RegularPolygon, Line, Text as KonvaText, Transformer } from "react-konva";
+import { Rulers } from "./Rulers";
+import type { RulerGuide } from "./Rulers";
 import type { BlendMode, CanvasProject, Layer, ShapeLayer } from "../../types/canvas";
 import { ImageLayerNode } from "./ImageLayerNode";
 
 export interface CanvasStageHandle {
-  toDataUrl: (format: "png" | "jpg", quality?: number) => string;
+  toDataUrl: (format: "png" | "jpg", quality?: number, pixelRatio?: number) => string;
 }
 
 interface Props {
@@ -16,6 +18,10 @@ interface Props {
   onMoveLayers: (layerIds: string[], dx: number, dy: number) => void;
   cropLayerId?: string | null;
   originalViewLayerId?: string | null;
+  rulersVisible?: boolean;
+  rulerGuides?: RulerGuide[];
+  onAddGuide?: (axis: "x" | "y", position: number) => void;
+  onClearGuides?: () => void;
 }
 
 // 노드 좌표가 도형의 중심인 도형들(Konva Ellipse/Star/RegularPolygon)
@@ -35,7 +41,7 @@ function readNodeTransform(node: Konva.Node) {
 
 // 캔버스를 컨테이너 크기에 맞춰(fit) 표시한다 — PRD 14장.
 export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasStage(
-  { project, selectedLayerId, onSelectLayer, onChangeLayer, onMoveLayers, cropLayerId = null, originalViewLayerId = null }, ref,
+  { project, selectedLayerId, onSelectLayer, onChangeLayer, onMoveLayers, cropLayerId = null, originalViewLayerId = null, rulersVisible = false, rulerGuides = [], onAddGuide, onClearGuides }, ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
@@ -44,6 +50,9 @@ export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasS
   const contentLayerRef = useRef<Konva.Layer>(null);
   const nodeRefs = useRef(new Map<string, Konva.Node>());
   const dragRef = useRef<{ node: Konva.Node; startX: number; startY: number; members: Array<{ node: Konva.Node; x: number; y: number }> } | null>(null);
+  const areaRef = useRef<HTMLDivElement>(null);
+  const guideGroupRef = useRef<Konva.Group>(null);
+  const [origin, setOrigin] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [guides, setGuides] = useState<Array<{ axis: "x" | "y"; position: number }>>([]);
   const [size, setSize] = useState({ width: 0, height: 0 });
 
@@ -67,6 +76,24 @@ export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasS
     });
     Promise.all(requests).then(() => stageRef.current?.batchDraw());
   }, [fontKey]);
+
+  // 눈금자가 캔버스 (0,0)의 화면 위치를 따라가도록, 렌더·스크롤·리사이즈마다 위치를 다시 잰다(값이 같으면 갱신하지 않는다).
+  const measureOrigin = () => {
+    const area = areaRef.current;
+    const stage = stageRef.current;
+    if (!area || !stage) return;
+    const areaRect = area.getBoundingClientRect();
+    const stageRect = stage.container().getBoundingClientRect();
+    const next = { x: Math.round(stageRect.left - areaRect.left), y: Math.round(stageRect.top - areaRect.top), width: Math.round(areaRect.width), height: Math.round(areaRect.height) };
+    setOrigin((prev) => prev.x === next.x && prev.y === next.y && prev.width === next.width && prev.height === next.height ? prev : next);
+  };
+  useEffect(() => { if (rulersVisible) measureOrigin(); });
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element || !rulersVisible) return;
+    element.addEventListener("scroll", measureOrigin);
+    return () => element.removeEventListener("scroll", measureOrigin);
+  }, [rulersVisible]);
 
   // Ctrl(또는 ⌘)+휠로 확대/축소. React 합성 이벤트는 passive라 preventDefault가 안 되어 직접 등록한다.
   useEffect(() => {
@@ -104,11 +131,12 @@ export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasS
   }, [project.layers, selectedLayerId]);
 
   useImperativeHandle(ref, () => ({
-    toDataUrl(format, quality = 0.9) {
+    toDataUrl(format, quality = 0.9, pixelRatio = 1) {
       const stage = stageRef.current;
       if (!stage || scale <= 0) throw new Error("캔버스를 아직 렌더링하지 못했습니다.");
       const transformer = transformerRef.current;
       transformer?.hide();
+      guideGroupRef.current?.hide();
 
       // 원본 1:1 크기로 임시 전환하여 부동소수점 오차 없는 정확한 픽셀 크기(1080x1080, 1080x1350, 1080x1920) 보장
       const prevWidth = stage.width();
@@ -126,7 +154,7 @@ export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasS
         return stage.toDataURL({
           mimeType: format === "jpg" ? "image/jpeg" : "image/png",
           quality,
-          pixelRatio: 1,
+          pixelRatio,
         });
       } finally {
         stage.width(prevWidth);
@@ -134,6 +162,7 @@ export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasS
         stage.scaleX(prevScaleX);
         stage.scaleY(prevScaleY);
         transformer?.show();
+        guideGroupRef.current?.show();
         stage.draw();
       }
     },
@@ -165,6 +194,7 @@ export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasS
     const box = node.getClientRect({ relativeTo: contentLayer });
     const threshold = 8 / scale;
     const targets = { x: [0, project.width / 2, project.width], y: [0, project.height / 2, project.height] };
+    for (const guide of rulerGuides) targets[guide.axis].push(guide.position);
     nodeRefs.current.forEach((other) => {
       if (other === node || groupMembers.has(other) || !other.visible()) return;
       const rect = other.getClientRect({ relativeTo: contentLayer });
@@ -228,7 +258,7 @@ export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasS
   };
 
   return (
-    <div className="canvas-stage-area">
+    <div ref={areaRef} className={`canvas-stage-area ${rulersVisible ? "has-rulers" : ""}`}>
      <div ref={containerRef} className="canvas-scroll">
       <div className="canvas-shadow">
         <Stage ref={stageRef} width={stageWidth} height={stageHeight} scaleX={scale} scaleY={scale}
@@ -277,6 +307,12 @@ export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasS
               }
               return null;
             })}
+            <Group ref={guideGroupRef} listening={false}>
+              {rulerGuides.map((guide) => (
+                <Line key={guide.id} listening={false} stroke="#22d3ee" strokeWidth={1 / scale}
+                  points={guide.axis === "x" ? [guide.position, 0, guide.position, project.height] : [0, guide.position, project.width, guide.position]} />
+              ))}
+            </Group>
             {guides.map((guide) => (
               <Line key={`${guide.axis}-${guide.position}`} listening={false} stroke="#ff4d8d" strokeWidth={1.5 / scale} dash={[6 / scale, 4 / scale]}
                 points={guide.axis === "x" ? [guide.position, 0, guide.position, project.height] : [0, guide.position, project.width, guide.position]} />
@@ -287,6 +323,9 @@ export const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasS
         </Stage>
       </div>
      </div>
+      {rulersVisible && onAddGuide && onClearGuides && (
+        <Rulers origin={origin} scale={scale} projectWidth={project.width} projectHeight={project.height} guides={rulerGuides} onAddGuide={onAddGuide} onClearGuides={onClearGuides} />
+      )}
       <div className="zoom-controls" role="group" aria-label="확대/축소">
         <button type="button" onClick={() => setZoom((z) => clampZoom(z / 1.25))} aria-label="축소">−</button>
         <button type="button" className="zoom-value" onClick={() => setZoom(1)} title="화면에 맞추기" aria-label="화면에 맞추기">{Math.round(zoom * 100)}%</button>

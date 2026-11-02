@@ -15,7 +15,7 @@
 | 파일 | 용도 |
 |---|---|
 | `작업내역_체크리스트.md` | **진행 상황·결정 기록·작업 로그.** AI 공용 인수인계 파일이자 단일 진실 공급원 |
-| `PRD.md` | 개발요청서 44장. 기능 요구사항·화면 설계·데이터 구조·야구 탭·백엔드 명세 |
+| `PRD.md` | 개발요청서 45장. 기능 요구사항·화면 설계·데이터 구조(43·44장 야구/백엔드는 폐기, 45장이 2차 기능) |
 | `CLAUDE.md` | AI가 폴더를 통째로 읽지 않도록 하는 토큰 절약 규칙 |
 | `AGENTS.md` / `GEMINI.md` | Codex·Antigravity 프로젝트 진입 지침 |
 | `docs/01_기획.md` | 구현된 아키텍처·기술 선택 요약 |
@@ -52,7 +52,7 @@
 
 ```text
 card-news-maker/
-├── PRD.md                       # 개발요청서 44장
+├── PRD.md                       # 개발요청서 45장
 ├── CLAUDE.md                    # AI 작업 규칙
 ├── AGENTS.md / GEMINI.md        # Codex / Antigravity 진입 지침
 ├── README.md
@@ -66,12 +66,16 @@ card-news-maker/
     ├── main.tsx
     ├── App.tsx                  # 편집기 셸 (상단바·도구 레일·밈/템플릿/레이어 서랍·속성 패널·단축키)
     ├── index.css                # 2차 디자인 토큰(인디고 + 바이올렛→핑크 그라디언트)
-    ├── components/canvas/       # CanvasStage(이미지·텍스트·도형 렌더링), ImageLayerNode
+    ├── components/canvas/       # CanvasStage(렌더링·스냅·줌), ImageLayerNode(보정·자르기), Rulers(눈금자)
     ├── components/editor/       # PropertiesPanel(공통 투명도·이미지 보정), TextStylePanel
     ├── components/layer/        # LayerPanel
     ├── components/template/     # TemplatePanel(내 템플릿), GalleryPanel(갤러리)(내 템플릿), GalleryPanel(갤러리)
     ├── components/shape/        # ShapePanel — 도형 추가
+    ├── components/export/       # ExportDialog — 형식·품질·크기·워터마크
+    ├── components/command/      # CommandPalette — Ctrl+K
+    ├── components/help/         # ShortcutHelp — 단축키 도움말
     ├── components/meme/         # MemePanel — 자막 프리셋·이모지 스티커
+    ├── features/export/         # exportImage — 워터마크·형식 변환, downloadCanvas
     ├── features/image/          # loadImageFile — F-01 형식·용량 검증
     ├── features/export/         # downloadCanvas — PNG/JPG 내보내기
     ├── features/template/       # templateStore — CRUD·JSON 가져오기/내보내기
@@ -105,6 +109,11 @@ card-news-maker/
 | 정렬 | 캔버스 기준 왼쪽/가운데/오른쪽/위/가운데/아래(그룹은 묶음 기준) |
 | 혼합 모드 | 곱하기·스크린·오버레이·어둡게·밝게 |
 | 이미지 보정 확장 | 채도·색조·필름 입자·모자이크, 누르는 동안 원본 비교 |
+| 보정 프리셋 강도 | 프리셋(흑백·세피아·선명·빈티지 등) 선택 후 0~200% 강도 슬라이더 |
+| 내보내기 | PNG·JPG·WebP, 품질, 50/100/200%, 글자 워터마크, 예상 용량·미리보기(Ctrl+E) |
+| 눈금자·가이드 | Shift+R로 눈금자, 눈금자를 클릭하면 가이드선(스냅 대상, 내보내기에는 미포함) |
+| 명령 팔레트 | Ctrl+K — 기능 이름으로 검색해 실행 |
+| 단축키 도움말 | `?` 또는 Ctrl+/ |
 | 단축키 | Ctrl+D 복제, Delete 삭제, 방향키 1px(Shift 10px) 이동, Esc 선택 해제 |
 
 ## 범위 밖
