@@ -1,18 +1,57 @@
+import { useEffect, useRef } from "react";
 import { Image as KonvaImage } from "react-konva";
 import useImage from "use-image";
+import Konva from "konva";
 import type { ImageLayer } from "../../types/canvas";
-import type Konva from "konva";
 
 interface Props {
   layer: ImageLayer;
+  cropMode?: boolean;
+  ignoreFilters?: boolean; // 원본 비교(누르는 동안 보정을 끄고 보여 줌)
+  onCropChange?: (changes: Partial<ImageLayer>, coalesceKey: string) => void;
   nodeRef?: (node: Konva.Image | null) => void;
   onSelect: () => void;
   onDragEnd: (node: Konva.Image) => void;
   onTransformEnd: (node: Konva.Image) => void;
 }
 
-export function ImageLayerNode({ layer, nodeRef, onSelect, onDragEnd, onTransformEnd }: Props) {
+function activeFilters(layer: ImageLayer, ignore: boolean) {
+  const f = ignore ? undefined : layer.filters;
+  const list: Array<typeof Konva.Filters.Brighten> = [];
+  if (!f) return list;
+  if (f.brightness) list.push(Konva.Filters.Brighten);
+  if (f.contrast) list.push(Konva.Filters.Contrast);
+  if (f.blur) list.push(Konva.Filters.Blur);
+  if (f.grayscale) list.push(Konva.Filters.Grayscale);
+  if (f.sepia) list.push(Konva.Filters.Sepia);
+  if (f.saturation || f.hue) list.push(Konva.Filters.HSL);
+  if (f.grain) list.push(Konva.Filters.Noise);
+  if (f.mosaic) list.push(Konva.Filters.Pixelate);
+  return list;
+}
+
+export function ImageLayerNode({ layer, cropMode = false, ignoreFilters = false, onCropChange, nodeRef, onSelect, onDragEnd, onTransformEnd }: Props) {
   const [image] = useImage(layer.src);
+  const localRef = useRef<Konva.Image | null>(null);
+  const filters = activeFilters(layer, ignoreFilters);
+  const hasFilters = filters.length > 0;
+  const filterKey = JSON.stringify(ignoreFilters ? {} : layer.filters ?? {});
+  // 자르기 모드에서 드래그하는 동안의 최신 focus/zoom. 이벤트가 리렌더보다 빨리 와도 값이 밀리지 않게 ref로 들고 있는다.
+  const cropState = useRef({ focusX: 0.5, focusY: 0.5, zoom: 1, pointer: { x: 0, y: 0 }, anchor: { x: 0, y: 0 } });
+  useEffect(() => {
+    cropState.current.focusX = layer.focusX ?? 0.5;
+    cropState.current.focusY = layer.focusY ?? 0.5;
+    cropState.current.zoom = layer.cropZoom ?? 1;
+  }, [layer.focusX, layer.focusY, layer.cropZoom]);
+
+  // Konva 필터는 노드를 캐시해야 적용된다. 필터가 없으면 캐시를 풀어 원본 렌더링을 유지한다.
+  useEffect(() => {
+    const node = localRef.current;
+    if (!node || !image) return;
+    if (hasFilters) node.cache({ pixelRatio: 1 });
+    else node.clearCache();
+    node.getLayer()?.batchDraw();
+  }, [image, hasFilters, filterKey, layer.width, layer.height]);
 
   if (!image) return null;
 
@@ -20,13 +59,22 @@ export function ImageLayerNode({ layer, nodeRef, onSelect, onDragEnd, onTransfor
   // 원본 이미지의 가로세로 비율이 다르면, 넘치는 쪽을 Konva의 crop으로 잘라내 채운다.
   const boxRatio = layer.width / layer.height;
   const imageRatio = image.naturalWidth / image.naturalHeight;
-  const crop = imageRatio > boxRatio
-    ? { x: (image.naturalWidth - image.naturalHeight * boxRatio) / 2, y: 0, width: image.naturalHeight * boxRatio, height: image.naturalHeight }
-    : { x: 0, y: (image.naturalHeight - image.naturalWidth / boxRatio) / 2, width: image.naturalWidth, height: image.naturalWidth / boxRatio };
+  const coverWidth = imageRatio > boxRatio ? image.naturalHeight * boxRatio : image.naturalWidth;
+  const coverHeight = imageRatio > boxRatio ? image.naturalHeight : image.naturalWidth / boxRatio;
+  // 자르기: cropZoom 배로 확대하고 focus 위치(0~1)에 맞춰 보여줄 영역을 잡는다. 기본값은 기존 중앙 cover와 동일.
+  const zoom = layer.cropZoom ?? 1;
+  const cropWidth = coverWidth / zoom;
+  const cropHeight = coverHeight / zoom;
+  const crop = {
+    x: (image.naturalWidth - cropWidth) * (layer.focusX ?? 0.5),
+    y: (image.naturalHeight - cropHeight) * (layer.focusY ?? 0.5),
+    width: cropWidth,
+    height: cropHeight,
+  };
 
   return (
     <KonvaImage
-      ref={nodeRef}
+      ref={(node) => { localRef.current = node; nodeRef?.(node); }}
       image={image}
       crop={crop}
       x={layer.x}
@@ -36,8 +84,47 @@ export function ImageLayerNode({ layer, nodeRef, onSelect, onDragEnd, onTransfor
       rotation={layer.rotation}
       visible={layer.visible}
       opacity={layer.opacity ?? 1}
+      filters={filters}
+      brightness={ignoreFilters ? 0 : layer.filters?.brightness ?? 0}
+      contrast={ignoreFilters ? 0 : layer.filters?.contrast ?? 0}
+      blurRadius={ignoreFilters ? 0 : layer.filters?.blur ?? 0}
+      saturation={ignoreFilters ? 0 : layer.filters?.saturation ?? 0}
+      hue={ignoreFilters ? 0 : (((layer.filters?.hue ?? 0) % 360) + 360) % 360}
+      noise={(ignoreFilters ? 0 : layer.filters?.grain ?? 0) / 100}
+      pixelSize={Math.max(1, ignoreFilters ? 1 : layer.filters?.mosaic ?? 1)}
+      globalCompositeOperation={layer.blendMode ?? "source-over"}
       listening={!layer.locked}
       draggable={!layer.locked}
+      dragBoundFunc={cropMode ? () => cropState.current.anchor : undefined}
+      onDragStart={(event) => {
+        if (!cropMode) return;
+        cropState.current.anchor = event.target.getAbsolutePosition();
+        cropState.current.pointer = event.target.getStage()?.getPointerPosition() ?? { x: 0, y: 0 };
+      }}
+      onDragMove={(event) => {
+        if (!cropMode) return;
+        const stage = event.target.getStage();
+        const pointer = stage?.getPointerPosition();
+        if (!stage || !pointer) return;
+        const state = cropState.current;
+        // 화면 픽셀 이동량 → 캔버스 단위 → 원본 이미지 픽셀. 이미지를 끈 방향과 반대로 보여줄 영역이 이동한다.
+        const dx = (pointer.x - state.pointer.x) / stage.scaleX();
+        const dy = (pointer.y - state.pointer.y) / stage.scaleY();
+        state.pointer = pointer;
+        const availableX = image.naturalWidth - cropWidth;
+        const availableY = image.naturalHeight - cropHeight;
+        const clamp = (value: number) => Math.min(1, Math.max(0, value));
+        if (availableX > 0) state.focusX = clamp(state.focusX - (dx * (cropWidth / layer.width)) / availableX);
+        if (availableY > 0) state.focusY = clamp(state.focusY - (dy * (cropHeight / layer.height)) / availableY);
+        onCropChange?.({ focusX: state.focusX, focusY: state.focusY }, "crop-drag");
+      }}
+      onWheel={(event) => {
+        if (!cropMode) return;
+        event.evt.preventDefault();
+        const next = Math.min(5, Math.max(1, cropState.current.zoom * (event.evt.deltaY < 0 ? 1.08 : 1 / 1.08)));
+        cropState.current.zoom = next;
+        onCropChange?.({ cropZoom: next }, "crop-wheel");
+      }}
       onClick={onSelect}
       onTap={onSelect}
       onDragEnd={(event) => onDragEnd(event.target as Konva.Image)}

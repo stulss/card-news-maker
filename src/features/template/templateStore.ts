@@ -1,3 +1,4 @@
+import { BLEND_MODES } from "../../types/canvas";
 import type { CanvasProject, Layer, TextLayer } from "../../types/canvas";
 
 export const TEMPLATE_STORAGE_KEY = "card-news-templates";
@@ -58,7 +59,31 @@ function hasBaseLayerFields(layer: Record<string, unknown>) {
   return typeof layer.id === "string" && typeof layer.name === "string" &&
     ["x", "y", "width", "height", "rotation", "zIndex"].every((key) => typeof layer[key] === "number" && Number.isFinite(layer[key])) &&
     typeof layer.visible === "boolean" && typeof layer.locked === "boolean" &&
-    hasValidOptionalOpacity(layer);
+    hasValidOptionalOpacity(layer) && (layer.groupId === undefined || typeof layer.groupId === "string") &&
+    (layer.blendMode === undefined || (BLEND_MODES as readonly unknown[]).includes(layer.blendMode));
+}
+
+// 필터 값은 선택 필드. 있으면 허용 범위의 유한수/불리언만 통과시킨다(비정상 값이 Konva 필터에 들어가지 않게).
+function hasValidOptionalFilters(filters: unknown) {
+  if (filters === undefined) return true;
+  if (!isRecord(filters)) return false;
+  const inRange = (key: string, min: number, max: number) =>
+    filters[key] === undefined || (typeof filters[key] === "number" && Number.isFinite(filters[key]) && filters[key] >= min && filters[key] <= max);
+  const isFlag = (key: string) => filters[key] === undefined || typeof filters[key] === "boolean";
+  return inRange("brightness", -1, 1) && inRange("contrast", -100, 100) && inRange("blur", 0, 40) && inRange("saturation", -1, 1) && inRange("hue", -180, 180) && inRange("grain", 0, 100) && inRange("mosaic", 0, 40) && isFlag("grayscale") && isFlag("sepia");
+}
+
+function hasValidOptionalCrop(layer: Record<string, unknown>) {
+  const inRange = (key: string, min: number, max: number) =>
+    layer[key] === undefined || (typeof layer[key] === "number" && Number.isFinite(layer[key]) && layer[key] >= min && layer[key] <= max);
+  return inRange("cropZoom", 1, 5) && inRange("focusX", 0, 1) && inRange("focusY", 0, 1);
+}
+
+function hasValidOptionalShadow(shadow: unknown) {
+  if (shadow === undefined) return true;
+  if (!isRecord(shadow)) return false;
+  const finite = (key: string) => typeof shadow[key] === "number" && Number.isFinite(shadow[key]);
+  return finite("offsetX") && finite("offsetY") && finite("blur") && typeof shadow.color === "string";
 }
 
 function isSafeImageSource(value: unknown) {
@@ -67,18 +92,18 @@ function isSafeImageSource(value: unknown) {
 
 function isValidLayer(value: unknown): value is Layer {
   if (!isRecord(value) || !hasBaseLayerFields(value) || typeof value.type !== "string") return false;
-  if (value.type === "image") return isSafeImageSource(value.src);
+  if (value.type === "image") return isSafeImageSource(value.src) && hasValidOptionalFilters(value.filters) && hasValidOptionalCrop(value);
   if (value.type === "text") {
     return typeof value.text === "string" && typeof value.fontFamily === "string" &&
       typeof value.fontSize === "number" && Number.isFinite(value.fontSize) && typeof value.color === "string" &&
       typeof value.bold === "boolean" && typeof value.italic === "boolean" &&
       (value.align === "left" || value.align === "center" || value.align === "right") &&
       typeof value.lineHeight === "number" && Number.isFinite(value.lineHeight) &&
-      typeof value.letterSpacing === "number" && Number.isFinite(value.letterSpacing);
+      typeof value.letterSpacing === "number" && Number.isFinite(value.letterSpacing) && hasValidOptionalShadow(value.shadow);
   }
   if (value.type === "sticker") return typeof value.assetId === "string" && isSafeImageSource(value.src);
   if (value.type === "shape") {
-    return (value.shapeType === "rectangle" || value.shapeType === "circle" || value.shapeType === "speechBubble") && typeof value.fillColor === "string";
+    return (value.shapeType === "rectangle" || value.shapeType === "circle" || value.shapeType === "star" || value.shapeType === "triangle" || value.shapeType === "speechBubble") && typeof value.fillColor === "string";
   }
   return false;
 }

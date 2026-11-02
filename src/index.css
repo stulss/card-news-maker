@@ -1,15 +1,18 @@
 :root {
-  /* design/*.dc.html 시안(Home·Main·BaseballTab·EditorMobile)에서 뽑은 토큰.
-     시안이 바뀌면 여기도 같이 갱신할 것 (CLAUDE.md 4번 원칙) */
-  --color-bg: oklch(0.17 0.008 264);
-  --color-bg-panel: oklch(0.195 0.008 264);
-  --color-bg-canvas-area: oklch(0.135 0.006 264);
-  --color-border: oklch(0.31 0.010 264);
-  --color-text: oklch(0.95 0.004 264);
-  --color-text-muted: oklch(0.72 0.008 264);
-  --color-text-dim: oklch(0.55 0.008 264);
-  --color-accent: oklch(0.76 0.152 62);
-  --color-accent-text: oklch(0.24 0.06 62);
+  /* 2차 디자인 개편 토큰: 딥 인디고 워크스페이스 + 바이올렛→핑크 그라디언트 강조.
+     design/*.dc.html 시안은 이전(오렌지) 방향이므로 필요 시 이 토큰 기준으로 다시 맞출 것 */
+  --color-bg: oklch(0.16 0.014 275);
+  --color-bg-panel: oklch(0.20 0.016 275);
+  --color-bg-input: oklch(0.24 0.016 275);
+  --color-bg-canvas-area: oklch(0.13 0.012 275);
+  --color-hover: oklch(0.29 0.02 275);
+  --color-border: oklch(0.32 0.02 275);
+  --color-text: oklch(0.96 0.004 275);
+  --color-text-muted: oklch(0.74 0.014 275);
+  --color-text-dim: oklch(0.58 0.014 275);
+  --color-accent: oklch(0.68 0.19 285);
+  --color-accent-soft: oklch(0.82 0.11 285);
+  --gradient-accent: linear-gradient(135deg, oklch(0.62 0.21 285), oklch(0.66 0.22 340));
   --font-sans: "IBM Plex Sans KR", "Malgun Gothic", system-ui, sans-serif;
 
   font-family: var(--font-sans);

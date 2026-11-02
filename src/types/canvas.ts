@@ -11,6 +11,11 @@ export interface CanvasProject {
   updatedAt: string;
 }
 
+// 허용하는 블렌드 모드는 화이트리스트로 제한한다. 임의 문자열(예: destination-out)을 열어 두면
+// 가져온 템플릿 JSON이 아래 레이어를 지울 수 있기 때문이다(templateStore가 같은 목록으로 검증한다).
+export const BLEND_MODES = ["multiply", "screen", "overlay", "darken", "lighten"] as const;
+export type BlendMode = (typeof BLEND_MODES)[number];
+
 export type Layer = ImageLayer | TextLayer | StickerLayer | ShapeLayer;
 
 export interface BaseLayer {
@@ -24,15 +29,31 @@ export interface BaseLayer {
   visible: boolean;
   locked: boolean;
   name: string;
+  blendMode?: BlendMode; // 없으면 일반(normal)
+  groupId?: string; // 같은 값이면 한 그룹: 캔버스 이동·표시·잠금을 함께 적용한다(멤버 2개 미만이면 자동 해제)
   opacity?: number; // 0~1, 기본 1(불투명). 워터마크 등 반투명 레이어에 쓴다.
-  // 주의: Konva의 globalCompositeOperation(블렌드 모드)은 일부러 노출하지 않는다.
-  // 가져온 템플릿 JSON이 "destination-out" 같은 값을 넣으면 아래 레이어를 지워버리기 때문에,
-  // 실제로 필요해지면 안전한 값만 허용하는 유니온 타입 + templateStore 검증을 함께 추가할 것.
+  // 블렌드 모드는 BLEND_MODES 화이트리스트만 허용한다(위 상수 주석 참고).
+}
+
+export interface ImageFilters {
+  brightness?: number; // -1~1, 0이 원본
+  contrast?: number; // -100~100, 0이 원본
+  blur?: number; // 0~40 px
+  saturation?: number; // -1~1, 0이 원본
+  hue?: number; // -180~180도, 0이 원본
+  grain?: number; // 0~100, 필름 입자(노이즈)
+  mosaic?: number; // 0~40, 모자이크 블록 크기(px)
+  grayscale?: boolean;
+  sepia?: boolean;
 }
 
 export interface ImageLayer extends BaseLayer {
   type: "image";
   src: string;
+  filters?: ImageFilters;
+  cropZoom?: number; // 1~5, 자르기 확대 배율(1=박스를 꽉 채우는 cover)
+  focusX?: number; // 0~1, 확대된 이미지에서 보여줄 가로 위치(0.5=중앙)
+  focusY?: number; // 0~1, 세로 위치
   cropX?: number;
   cropY?: number;
   cropWidth?: number;
@@ -64,7 +85,7 @@ export interface StickerLayer extends BaseLayer {
 
 export interface ShapeLayer extends BaseLayer {
   type: "shape";
-  shapeType: "rectangle" | "circle" | "speechBubble";
+  shapeType: "rectangle" | "circle" | "star" | "triangle" | "speechBubble";
   fillColor: string;
   strokeColor?: string;
   strokeWidth?: number;

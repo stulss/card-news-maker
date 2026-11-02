@@ -1,13 +1,12 @@
 # card-news-maker
 
 이미지에 문구를 얹어 카드뉴스·밈을 만드는 웹 도구. 로그인 없이 브라우저에서 바로 쓰고,
-업로드한 이미지는 서버로 전송되지 않는다. KBO 경기 결과를 스코어보드 카드뉴스로 만드는 탭을 별도로 둔다.
+업로드한 이미지는 서버로 전송되지 않는다. 밈 자막 프리셋·이모지 스티커·이미지 보정·실행 취소를 지원한다.
 
-> **상태: 카드 1~5 + 야구 결과 카드 + 배포 + 제출 자료 제작 완료.**
-> 편집·미리보기·화면비 전환·템플릿 CRUD·JSON 이동·모바일 반응형·야구 결과 카드 자동 생성까지
-> 브라우저로 실검증했고, Vercel 운영 환경의 서버리스 API도 정상 동작한다.
-> 제출용 PPTX/PDF와 증거 이미지 15종까지 생성했다.
-> 진행 상황은 항상 `작업내역_체크리스트.md`가 최신이다.
+> **상태: 2차 고도화 진행 중 (2026-11-02).** 야구 탭·KBO 프록시·구단 엠블럼을 제거하고,
+> 실행 취소/다시 실행·정렬 스냅 가이드·이미지 보정·밈 프리셋·이모지 스티커·키보드 단축키와
+> 새 UI(도구 레일 + 속성 패널, 인디고/바이올렛 테마)를 추가했다. 1차 제출 시점(`c75185d`/`9c362ac`)
+> 산출물은 git 이력에 그대로 남아 있다. 진행 상황은 항상 `작업내역_체크리스트.md`가 최신이다.
 
 **배포 주소:** https://card-news-maker-beige.vercel.app/
 
@@ -40,18 +39,14 @@
 | 데이터 구조 (`CanvasProject`, `Layer`) | 21장 |
 | 기술 스택 선정 근거 | 22장 |
 | 저장·처리 원칙 | 24장 |
-| 야구 결과 카드뉴스 탭 (F-30~F-33) | 43장 |
-| 백엔드 구조·API 명세 | 44장 |
 
 ## 기술 스택
 
 - **프론트엔드**: React + TypeScript + Konva.js + Vite — 정적 빌드
-- **백엔드**: 서버리스 함수 **1개** (KBO 경기 결과 조회 프록시)
+- **백엔드**: 없음 (야구 탭 제거로 서버리스 함수도 삭제)
 - **저장**: localStorage
 
-백엔드가 필요한 이유는 야구 데이터 하나뿐이다. 브라우저에서 KBO 사이트를 직접 호출하면 CORS로 차단되고,
-원본 응답 형식이 바뀌어도 프론트를 고치지 않도록 서버에서 정규화한다.
-**이미지 편집은 전부 브라우저 안에서 끝나며 사용자 이미지는 이 경로를 거치지 않는다.**
+**이미지 편집은 전부 브라우저 안에서 끝나며 사용자 이미지는 서버로 가지 않는다.**
 
 ## 폴더 구조
 
@@ -62,51 +57,58 @@ card-news-maker/
 ├── AGENTS.md / GEMINI.md        # Codex / Antigravity 진입 지침
 ├── README.md
 ├── 작업내역_체크리스트.md         # 진행 상황·결정 기록
-├── docs/                        # 기획·배포·검증·제출 보고서·증거 자료
+├── docs/                        # 기획·배포·검증·제출 보고서·증거 자료·`07_레퍼런스_분석.md`
 ├── design/                      # 화면 시안 4장 + canvas.json (구현 완료 후 참고용, 코드는 이미 별도)
-├── api/                         # 서버리스 함수(Vercel) — KBO 경기 결과 프록시
-│   ├── _kboClient.ts            #   크롤링·정규화 로직 (Vercel 함수·로컬 dev 미들웨어 공용)
-│   └── kbo-schedule.ts          #   GET /api/kbo-schedule?date=YYYY-MM-DD
-├── public/
-│   └── logos/                   # 구단 엠블럼 10종 + SOURCES.md(출처·취득일)
 ├── index.html
-├── vite.config.ts               # KBO 프록시용 로컬 dev 미들웨어 포함
-├── tsconfig*.json                # app / node / api 세 프로젝트로 분리
+├── vite.config.ts
+├── tsconfig*.json                # app / node 두 프로젝트로 분리
 └── src/
     ├── main.tsx
-    ├── App.tsx                  # 편집기 화면 셸 (레이어/템플릿/야구 3탭)
-    ├── index.css                # 시안 색 토큰을 옮긴 CSS 변수
+    ├── App.tsx                  # 편집기 셸 (상단바·도구 레일·밈/템플릿/레이어 서랍·속성 패널·단축키)
+    ├── index.css                # 2차 디자인 토큰(인디고 + 바이올렛→핑크 그라디언트)
     ├── components/canvas/       # CanvasStage(이미지·텍스트·도형 렌더링), ImageLayerNode
-    ├── components/editor/       # TextStylePanel
+    ├── components/editor/       # PropertiesPanel(공통 투명도·이미지 보정), TextStylePanel
     ├── components/layer/        # LayerPanel
-    ├── components/template/     # TemplatePanel
-    ├── components/baseball/     # BaseballTab — 날짜 조회·경기 목록·카드 생성
+    ├── components/template/     # TemplatePanel(내 템플릿), GalleryPanel(갤러리)(내 템플릿), GalleryPanel(갤러리)
+    ├── components/shape/        # ShapePanel — 도형 추가
+    ├── components/meme/         # MemePanel — 자막 프리셋·이모지 스티커
     ├── features/image/          # loadImageFile — F-01 형식·용량 검증
     ├── features/export/         # downloadCanvas — PNG/JPG 내보내기
     ├── features/template/       # templateStore — CRUD·JSON 가져오기/내보내기
-    ├── features/baseball/       # teams, fetchKboSchedule, buildScoreboardLayers
-    ├── types/                   # canvas.ts(21장), baseball.ts(43장)
+    ├── features/history/        # useProjectHistory — 실행 취소/다시 실행(연속 변경 병합)
+    ├── features/layer/          # groups — 그룹 정규화·멤버 조회
+    ├── features/sticker/        # stickerStore — 내 스티커 저장
+    ├── features/meme/           # memePresets — 자막 레이어 프리셋·이모지 스티커
+    ├── types/                   # canvas.ts(21장)
     └── utils/                   # createProject.ts, textDefaults.ts
 ```
 
-## 두 개의 탭
+## 주요 편집 기능
 
-| 탭 | 역할 |
+| 기능 | 설명 |
 |---|---|
-| 일반 카드 (기본) | 사용자가 이미지를 업로드해 문구를 얹는다 |
-| 야구 카드 | 날짜를 고르면 그날 경기 결과로 스코어보드 카드를 자동 생성한다 |
-
-탭은 **이미지 소스만** 전환한다. 편집기·텍스트 스타일 패널·미리보기·다운로드는 두 탭이 공통으로 쓴다.
+| 실행 취소 / 다시 실행 | Ctrl+Z, Ctrl+Shift+Z(Ctrl+Y). 슬라이더 조작은 한 단계로 묶음 |
+| 정렬 스냅 가이드 | 드래그 중 캔버스·다른 레이어의 가장자리/중앙에 자석처럼 붙고 분홍 점선 표시 |
+| 이미지 보정 | 흑백·세피아·선명·어둡게·흐림 프리셋 + 밝기/대비/흐림 슬라이더 |
+| 밈 프리셋 | 클래식 상·하단, 중앙 한 줄, 영화 자막, 말풍선, 속보 뉴스 |
+| 이모지 스티커 | 24종, 크기·회전 가능 |
+| 줌/패닝 | Ctrl+휠 또는 우하단 ± 버튼(25~400%), 확대 시 스크롤로 이동 |
+| 텍스트 그림자 | 색·번짐·가로/세로 오프셋 |
+| 템플릿 갤러리 | 카드뉴스·밈·공지·SNS 20종, 클릭하면 캔버스 교체(실행 취소 가능) |
+| 레이어 정렬 | 레이어 목록에서 ⋮⋮ 손잡이를 끌어 순서 변경(마우스·터치, ▲▼ 버튼도 가능) |
+| 이미지 자르기 | 비율 버튼(1:1·4:5·16:9·9:16·캔버스) + 확대 100~500% + 가로/세로 위치 슬라이더 |
+| 직접 자르기 | 속성 패널에서 자르기 모드 → 이미지를 끌어 위치, 휠로 확대 |
+| 글꼴 | 한글 웹폰트 12종(Noto Sans/Serif KR, 주아, 도현, 검은고딕 등) |
+| 레이어 그룹 | 다중 선택 → 그룹 만들기. 이동·표시·잠금을 함께 적용 |
+| 내 스티커 | 이미지를 올려 투명 PNG 스티커로 저장(브라우저 localStorage, 최대 24개) |
+| 도형 | 사각형·둥근 사각형·원·별·삼각형·구분선, 채우기·테두리·모서리 조절 |
+| 정렬 | 캔버스 기준 왼쪽/가운데/오른쪽/위/가운데/아래(그룹은 묶음 기준) |
+| 혼합 모드 | 곱하기·스크린·오버레이·어둡게·밝게 |
+| 이미지 보정 확장 | 채도·색조·필름 입자·모자이크, 누르는 동안 원본 비교 |
+| 단축키 | Ctrl+D 복제, Delete 삭제, 방향키 1px(Shift 10px) 이동, Esc 선택 해제 |
 
 ## 범위 밖
 
 - **수익화 전부** (광고·결제·구독·프리미엄 잠금) — 과제 범위에서 영구 제외. `PRD.md` 40장은 기록용으로만 남긴다.
 - 회원가입·로그인·클라우드 저장·협업 편집 — `PRD.md` 42장 "절대 먼저 만들지 말아야 할 기능"
 - 동영상·GIF 편집, 고급 사진 보정, 템플릿 마켓 — `PRD.md` 11장 초기 제외 범위
-
-## 저작권
-
-구단 엠블럼은 사용자 제공 구단별 원본과 공식 사이트 제공 이미지 등을 투명 PNG로 정리해
-**비상업적 과제 용도로만** 사용한다. 재도안·색상 변경은 하지 않았으며, 파일별 원본·변환 이력은
-`public/logos/SOURCES.md`에 기록한다. 엠블럼의 권리는 각 구단 및 KBO에 있다.
-상업적 이용으로 전환하려면 각 구단·KBO의 별도 허락이 필요하다.

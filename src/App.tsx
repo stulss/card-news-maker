@@ -1,10 +1,20 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CanvasStage } from "./components/canvas/CanvasStage";
 import type { CanvasStageHandle } from "./components/canvas/CanvasStage";
-import { TextStylePanel } from "./components/editor/TextStylePanel";
+import { PropertiesPanel } from "./components/editor/PropertiesPanel";
+import { MemePanel } from "./components/meme/MemePanel";
 import { LayerPanel } from "./components/layer/LayerPanel";
 import { TemplatePanel } from "./components/template/TemplatePanel";
-import { BaseballTab } from "./components/baseball/BaseballTab";
+import { GalleryPanel } from "./components/template/GalleryPanel";
+import { ShapePanel } from "./components/shape/ShapePanel";
+import type { ShapeKind } from "./components/shape/ShapePanel";
+import type { AlignMode } from "./components/editor/PropertiesPanel";
+import type { GalleryTemplate } from "./features/template/galleryTemplates";
+import { useProjectHistory } from "./features/history/useProjectHistory";
+import { buildEmojiSticker, buildMemePreset } from "./features/meme/memePresets";
+import { groupMemberIds, normalizeGroups } from "./features/layer/groups";
+import { createStickerFromFile, loadStickers, saveStickers } from "./features/sticker/stickerStore";
+import type { UserSticker } from "./features/sticker/stickerStore";
 import { createEmptyProject } from "./utils/createProject";
 import { textColorDefaultsFor } from "./utils/textDefaults";
 import { loadImageFile, ImageUploadError } from "./features/image/loadImageFile";
@@ -42,65 +52,235 @@ function initializeTemplates() {
 }
 
 function App() {
-  const [project, setProject] = useState(() => createEmptyProject(1080, 1080));
+  const { project, setProject, undo, redo, canUndo, canRedo } = useProjectHistory(() => createEmptyProject(1080, 1080));
   const [initialTemplates] = useState(initializeTemplates);
   const [templates, setTemplates] = useState(initialTemplates.templates);
-  const [sidebarTab, setSidebarTab] = useState<"layers" | "templates" | "baseball">("layers");
+  const [sidebarTab, setSidebarTab] = useState<"layers" | "templates" | "meme" | "gallery" | "shapes">("gallery");
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isStyleSheetOpen, setIsStyleSheetOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(initialTemplates.error);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
+  const [cropTargetId, setCropTargetId] = useState<string | null>(null);
+  const [isComparingOriginal, setIsComparingOriginal] = useState(false);
+  const [userStickers, setUserStickers] = useState<UserSticker[]>(loadStickers);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasStageRef = useRef<CanvasStageHandle>(null);
 
   const selectedLayer = project.layers.find((layer) => layer.id === selectedLayerId) ?? null;
-  const selectedTextLayer = selectedLayer?.type === "text" ? selectedLayer : null;
+  // 자르기 모드는 선택된 이미지 레이어 하나에만 적용된다(다른 레이어를 고르면 자동으로 꺼진 것으로 취급).
+  const cropLayerId = selectedLayer?.type === "image" && selectedLayer.id === cropTargetId ? selectedLayer.id : null;
+  const nextZIndex = project.layers.reduce((max, layer) => Math.max(max, layer.zIndex), -1) + 1;
 
-  function updateLayer(layerId: string, changes: Partial<Layer>) {
+  function updateLayer(layerId: string, changes: Partial<Layer>, coalesceKey?: string) {
     setProject((current) => ({
       ...current,
       layers: current.layers.map((layer) => layer.id === layerId ? { ...layer, ...changes } as Layer : layer),
       updatedAt: new Date().toISOString(),
-    }));
+    }), coalesceKey);
   }
 
-  function handleToggleVisible(layerId: string) {
-    const layer = project.layers.find((l) => l.id === layerId);
-    if (layer) updateLayer(layerId, { visible: !layer.visible });
+  function addLayers(newLayers: Layer[]) {
+    if (newLayers.length === 0) return;
+    const placed = newLayers.map((layer, index) => ({ ...layer, zIndex: nextZIndex + index }));
+    setProject((p) => ({ ...p, layers: [...p.layers, ...placed], updatedAt: new Date().toISOString() }));
+    setSelectedLayerId(placed[0].id);
   }
 
-  function handleToggleLocked(layerId: string) {
+  function handleDuplicateLayer() {
+    if (!selectedLayer) return;
+    addLayers([{ ...structuredClone(selectedLayer), id: crypto.randomUUID(), x: selectedLayer.x + 30, y: selectedLayer.y + 30, name: `${selectedLayer.name} 복사`, locked: false, groupId: undefined }]);
+  }
+
+  function handleApplyMemePreset(presetId: string) {
+    addLayers(buildMemePreset(presetId, project));
+    setErrorMessage(null);
+    setIsMobileSidebarOpen(false);
+  }
+
+  function handleAddSticker(emoji: string) {
+    addLayers([buildEmojiSticker(emoji, project)]);
+    setIsMobileSidebarOpen(false);
+  }
+
+  // 키보드 단축키 — 입력창에 포커스가 있을 때는 브라우저 기본 동작(글자 편집 취소 등)을 그대로 둔다.
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      if (target && (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))) return;
+      const mod = event.ctrlKey || event.metaKey;
+      const key = event.key.toLowerCase();
+      if (mod && key === "z") { event.preventDefault(); if (event.shiftKey) redo(); else undo(); return; }
+      if (mod && key === "y") { event.preventDefault(); redo(); return; }
+      if (!selectedLayer) return;
+      if (mod && key === "d") { event.preventDefault(); handleDuplicateLayer(); return; }
+      if (key === "delete" || key === "backspace") { event.preventDefault(); handleDeleteLayer(selectedLayer.id); return; }
+      if (key === "escape") { if (cropLayerId) setCropTargetId(null); else setSelectedLayerId(null); return; }
+      const step = event.shiftKey ? 10 : 1;
+      const moves: Record<string, [number, number]> = { arrowleft: [-step, 0], arrowright: [step, 0], arrowup: [0, -step], arrowdown: [0, step] };
+      const move = moves[key];
+      if (move && !selectedLayer.locked) {
+        event.preventDefault();
+        handleMoveLayers(groupMemberIds(project.layers, selectedLayer).filter((id) => !project.layers.find((l) => l.id === id)?.locked), move[0], move[1], "nudge");
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  });
+
+  // 표시·잠금은 그룹 단위로 적용한다(그룹이 없으면 레이어 하나).
+  function setLayerFlag(layerId: string, flag: "visible" | "locked") {
     const layer = project.layers.find((l) => l.id === layerId);
-    if (layer) updateLayer(layerId, { locked: !layer.locked });
+    if (!layer) return;
+    const members = new Set(groupMemberIds(project.layers, layer));
+    const value = !layer[flag];
+    setProject((p) => ({ ...p, layers: p.layers.map((l) => members.has(l.id) ? { ...l, [flag]: value } as Layer : l), updatedAt: new Date().toISOString() }));
+  }
+
+  const handleToggleVisible = (layerId: string) => setLayerFlag(layerId, "visible");
+  const handleToggleLocked = (layerId: string) => setLayerFlag(layerId, "locked");
+
+  function handleMoveLayers(layerIds: string[], dx: number, dy: number, coalesceKey?: string) {
+    if (!dx && !dy) return;
+    const ids = new Set(layerIds);
+    setProject((p) => ({ ...p, layers: p.layers.map((l) => ids.has(l.id) ? { ...l, x: l.x + dx, y: l.y + dy } : l), updatedAt: new Date().toISOString() }), coalesceKey);
+  }
+
+  function handleGroupLayers(layerIds: string[]) {
+    if (layerIds.length < 2) return;
+    const ids = new Set(layerIds);
+    const groupId = crypto.randomUUID();
+    setProject((p) => ({ ...p, layers: normalizeGroups(p.layers.map((l) => ids.has(l.id) ? { ...l, groupId } : l)), updatedAt: new Date().toISOString() }));
+    setStatusMessage(`${layerIds.length}개 레이어를 그룹으로 묶었습니다. 이동·숨김·잠금이 함께 적용됩니다.`);
+  }
+
+  function handleUngroupLayers(groupIds: string[]) {
+    const targets = new Set(groupIds);
+    setProject((p) => ({ ...p, layers: p.layers.map((l) => { if (!l.groupId || !targets.has(l.groupId)) return l; const { groupId: _removed, ...rest } = l; return rest as Layer; }), updatedAt: new Date().toISOString() }));
+    setStatusMessage("그룹을 해제했습니다.");
+  }
+
+  async function handleUploadSticker(file: File) {
+    try {
+      const sticker = await createStickerFromFile(file);
+      const next = [...userStickers, sticker];
+      saveStickers(next);
+      setUserStickers(next);
+      setErrorMessage(null);
+      setStatusMessage(`"${sticker.name}" 스티커를 저장했습니다. 눌러서 캔버스에 추가하세요.`);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "스티커를 저장하지 못했습니다.");
+    }
+  }
+
+  function handleAddUserSticker(stickerId: string) {
+    const sticker = userStickers.find((s) => s.id === stickerId);
+    if (!sticker) return;
+    // 캔버스 폭의 40%(세로는 60%) 안에 비율을 유지해 가운데에 놓는다.
+    const fit = Math.min((project.width * 0.4) / sticker.width, (project.height * 0.6) / sticker.height);
+    const width = sticker.width * fit;
+    const height = sticker.height * fit;
+    addLayers([{
+      id: crypto.randomUUID(), type: "image", src: sticker.src, name: sticker.name,
+      x: (project.width - width) / 2, y: (project.height - height) / 2, width, height,
+      rotation: 0, zIndex: 0, visible: true, locked: false,
+    }]);
+    setIsMobileSidebarOpen(false);
+  }
+
+  function handleAddShape(kind: ShapeKind, fillColor: string) {
+    const base = Math.round(project.width * 0.33);
+    const sizes: Record<ShapeKind, { width: number; height: number }> = {
+      rectangle: { width: Math.round(project.width * 0.45), height: Math.round(project.width * 0.28) },
+      rounded: { width: Math.round(project.width * 0.45), height: Math.round(project.width * 0.28) },
+      circle: { width: base, height: base },
+      star: { width: base, height: base },
+      triangle: { width: base, height: base },
+      line: { width: Math.round(project.width * 0.55), height: Math.max(8, Math.round(project.width * 0.01)) },
+    };
+    const { width, height } = sizes[kind];
+    const labels: Record<ShapeKind, string> = { rectangle: "사각형", rounded: "둥근 사각형", circle: "원", star: "별", triangle: "삼각형", line: "구분선" };
+    addLayers([{
+      id: crypto.randomUUID(), type: "shape", name: labels[kind],
+      shapeType: kind === "rounded" || kind === "line" ? "rectangle" : kind,
+      x: (project.width - width) / 2, y: (project.height - height) / 2, width, height,
+      rotation: 0, zIndex: 0, visible: true, locked: false, fillColor,
+      cornerRadius: kind === "rounded" ? Math.round(height * 0.2) : undefined,
+    }]);
+    setIsMobileSidebarOpen(false);
+  }
+
+  // 캔버스 기준 정렬. 그룹에 속한 레이어는 그룹 전체의 경계 상자를 기준으로 함께 움직인다.
+  function handleAlign(mode: AlignMode) {
+    if (!selectedLayer) return;
+    const ids = groupMemberIds(project.layers, selectedLayer);
+    const members = project.layers.filter((l) => ids.includes(l.id) && !l.locked);
+    if (members.length === 0) return;
+    const minX = Math.min(...members.map((l) => l.x));
+    const maxX = Math.max(...members.map((l) => l.x + l.width));
+    const minY = Math.min(...members.map((l) => l.y));
+    const maxY = Math.max(...members.map((l) => l.y + l.height));
+    const dx = mode === "left" ? -minX : mode === "right" ? project.width - maxX : mode === "hcenter" ? project.width / 2 - (minX + maxX) / 2 : 0;
+    const dy = mode === "top" ? -minY : mode === "bottom" ? project.height - maxY : mode === "vcenter" ? project.height / 2 - (minY + maxY) / 2 : 0;
+    handleMoveLayers(members.map((l) => l.id), dx, dy);
+  }
+
+  function handleDeleteUserSticker(stickerId: string) {
+    const next = userStickers.filter((s) => s.id !== stickerId);
+    try { saveStickers(next); } catch (error) { console.error("Sticker storage failed", error); }
+    setUserStickers(next);
+  }
+
+  // 레이어 순서는 항상 새 배열/새 객체로 바꾼다 — 이력(undo) 스냅샷과 객체를 공유하므로 제자리 수정 금지.
+  function reorderLayers(move: (idsFrontToBack: string[]) => string[]) {
+    setProject((current) => {
+      const frontToBack = [...current.layers].sort((a, b) => b.zIndex - a.zIndex).map((layer) => layer.id);
+      const next = move(frontToBack);
+      if (next.join() === frontToBack.join()) return current;
+      const zIndexById = new Map(next.map((id, index) => [id, next.length - 1 - index]));
+      return {
+        ...current,
+        layers: current.layers.map((layer) => ({ ...layer, zIndex: zIndexById.get(layer.id) ?? layer.zIndex })),
+        updatedAt: new Date().toISOString(),
+      };
+    });
   }
 
   function handleMoveLayer(layerId: string, direction: "up" | "down") {
-    const sorted = [...project.layers].sort((a, b) => a.zIndex - b.zIndex);
-    const index = sorted.findIndex((l) => l.id === layerId);
-    if (index < 0) return;
+    reorderLayers((ids) => {
+      const index = ids.indexOf(layerId);
+      const target = direction === "up" ? index - 1 : index + 1;
+      if (index < 0 || target < 0 || target >= ids.length) return ids;
+      const next = [...ids];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  }
 
-    if (direction === "up" && index < sorted.length - 1) {
-      const temp = sorted[index].zIndex;
-      sorted[index].zIndex = sorted[index + 1].zIndex;
-      sorted[index + 1].zIndex = temp;
-    } else if (direction === "down" && index > 0) {
-      const temp = sorted[index].zIndex;
-      sorted[index].zIndex = sorted[index - 1].zIndex;
-      sorted[index - 1].zIndex = temp;
-    }
+  function handleReorderLayer(fromId: string, toId: string) {
+    reorderLayers((ids) => {
+      const next = ids.filter((id) => id !== fromId);
+      const toIndex = next.indexOf(toId);
+      if (toIndex < 0 || !ids.includes(fromId)) return ids;
+      // 아래로 끌면 대상 뒤에, 위로 끌면 대상 앞에 놓아 맨 위·맨 아래 위치에도 도달할 수 있게 한다.
+      next.splice(ids.indexOf(fromId) < ids.indexOf(toId) ? toIndex + 1 : toIndex, 0, fromId);
+      return next;
+    });
+  }
 
-    setProject((current) => ({
-      ...current,
-      layers: [...sorted],
-      updatedAt: new Date().toISOString(),
-    }));
+  function handleApplyGalleryTemplate(template: GalleryTemplate) {
+    const layers = structuredClone(template.canvas.layers).map((layer) => ({ ...layer, id: crypto.randomUUID() }));
+    setProject((p) => ({ ...p, width: template.canvas.width, height: template.canvas.height, backgroundColor: template.canvas.backgroundColor, layers, updatedAt: new Date().toISOString() }));
+    setSelectedLayerId(null);
+    setErrorMessage(null);
+    setStatusMessage(`"${template.name}" 템플릿을 적용했습니다. 문구를 눌러 바꿔 보세요.`);
+    setIsMobileSidebarOpen(false);
   }
 
   function handleDeleteLayer(layerId: string) {
     setProject((current) => ({
       ...current,
-      layers: current.layers.filter((l) => l.id !== layerId),
+      layers: normalizeGroups(current.layers.filter((l) => l.id !== layerId)),
       updatedAt: new Date().toISOString(),
     }));
     if (selectedLayerId === layerId) setSelectedLayerId(null);
@@ -221,7 +401,7 @@ function App() {
         width,
         height,
         rotation: 0,
-        zIndex: project.layers.length,
+        zIndex: nextZIndex,
         visible: true,
         locked: false,
         name: file.name,
@@ -251,7 +431,7 @@ function App() {
       width: project.width - 160,
       height: 120,
       rotation: 0,
-      zIndex: project.layers.length,
+      zIndex: nextZIndex,
       visible: true,
       locked: false,
       name: `텍스트 ${project.layers.filter((l) => l.type === "text").length + 1}`,
@@ -270,14 +450,6 @@ function App() {
     setSelectedLayerId(newLayer.id);
   }
 
-  function handleGenerateBaseballCard(result: { backgroundColor: string; layers: Layer[] }) {
-    setProject((p) => ({ ...p, backgroundColor: result.backgroundColor, layers: result.layers, updatedAt: new Date().toISOString() }));
-    setSelectedLayerId(null);
-    setSidebarTab("layers");
-    setErrorMessage(null);
-    setStatusMessage("야구 결과 카드를 만들었습니다. 자유롭게 편집해 보세요.");
-  }
-
   function handleDownload(format: "png" | "jpg") {
     try {
       const dataUrl = canvasStageRef.current?.toDataUrl(format, 0.9);
@@ -290,112 +462,80 @@ function App() {
     }
   }
 
+  function openTab(tab: "layers" | "templates" | "meme" | "gallery" | "shapes") {
+    setIsStyleSheetOpen(false);
+    setIsMobileSidebarOpen(sidebarTab === tab ? !isMobileSidebarOpen : true);
+    setSidebarTab(tab);
+  }
+
+  const railTabs = [
+    { id: "gallery", icon: "▦", label: "갤러리" },
+    { id: "shapes", icon: "◆", label: "도형" },
+    { id: "meme", icon: "😂", label: "밈" },
+    { id: "templates", icon: "★", label: "내 템플릿" },
+    { id: "layers", icon: "☰", label: "레이어" },
+  ] as const;
+
   return (
     <div className="app-shell">
-      <header className="app-header">
-        <div className="brand-controls">
-          <div className="app-brand">
-            <div style={{ width: 20, height: 20, borderRadius: 5, background: "var(--color-accent)" }} />
-            <div style={{ fontSize: 14, fontWeight: 600 }}>카드뉴스 메이커</div>
+      <header className="topbar">
+        <div className="topbar-group">
+          <div className="app-brand"><span className="brand-mark" aria-hidden="true" />카드뉴스 메이커</div>
+          <div className="history-buttons" role="group" aria-label="실행 취소">
+            <button type="button" onClick={undo} disabled={!canUndo} title="실행 취소 (Ctrl+Z)" aria-label="실행 취소">↶</button>
+            <button type="button" onClick={redo} disabled={!canRedo} title="다시 실행 (Ctrl+Shift+Z)" aria-label="다시 실행">↷</button>
           </div>
+        </div>
 
+        <div className="topbar-group topbar-center">
           <div className="ratio-selector" role="group" aria-label="화면비 선택">
             {RATIO_PRESETS.map((preset) => {
               const isActive = project.width === preset.width && project.height === preset.height;
               return (
-                <button
-                  key={preset.label}
-                  type="button"
-                  onClick={() => setProject((p) => ({ ...p, width: preset.width, height: preset.height, updatedAt: new Date().toISOString() }))}
-                  style={{
-                    padding: "4px 10px",
-                    borderRadius: 5,
-                    border: "none",
-                    background: isActive ? "var(--color-accent)" : "transparent",
-                    color: isActive ? "var(--color-accent-text)" : "var(--color-text-muted)",
-                    fontSize: 12,
-                    fontWeight: isActive ? 600 : 500,
-                    cursor: "pointer",
-                  }}
-                  aria-pressed={isActive}
-                >
+                <button key={preset.label} type="button" className={isActive ? "active" : ""} aria-pressed={isActive}
+                  onClick={() => setProject((p) => ({ ...p, width: preset.width, height: preset.height, updatedAt: new Date().toISOString() }))}>
                   {preset.label}
                 </button>
               );
             })}
           </div>
+          <label className="bg-picker" title="배경색">
+            <input type="color" value={/^#[0-9a-f]{6}$/i.test(project.backgroundColor) ? project.backgroundColor : "#ffffff"}
+              onChange={(event) => setProject((p) => ({ ...p, backgroundColor: event.target.value, updatedAt: new Date().toISOString() }), "background")} />
+            <span>배경</span>
+          </label>
         </div>
 
-        <div className="desktop-toolbar">
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            style={toolbarButtonStyle}
-          >
-            이미지 추가
-          </button>
-          <button type="button" onClick={handleAddText} style={toolbarButtonStyle}>
-            텍스트 추가
-          </button>
-          <button type="button" onClick={() => handleDownload("jpg")} style={toolbarButtonStyle}>
-            JPG 다운로드
-          </button>
-          <button type="button" className="mobile-save-button" onClick={() => handleDownload("png")} style={{ ...toolbarButtonStyle, background: "var(--color-accent)", color: "var(--color-accent-text)", fontWeight: 600 }}>
-            PNG 다운로드
-          </button>
+        <div className="topbar-group desktop-only">
+          <button type="button" className="btn" onClick={() => handleDownload("jpg")}>JPG</button>
+          <button type="button" className="btn primary" onClick={() => handleDownload("png")}>PNG 다운로드</button>
         </div>
+        <button type="button" className="btn primary mobile-only" onClick={() => handleDownload("png")}>저장</button>
 
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          style={{ display: "none" }}
-          onChange={handleFileSelected}
-        />
+        <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={handleFileSelected} />
       </header>
 
-      {errorMessage && (
-        <div
-          style={{
-            padding: "10px 20px",
-            background: "oklch(0.30 0.10 25)",
-            color: "oklch(0.92 0.03 25)",
-            fontSize: 13,
-          }}
-        >
-          {errorMessage}
-        </div>
-      )}
+      {errorMessage && <div className="banner error" role="alert">{errorMessage}</div>}
+      {statusMessage && !errorMessage && <div className="banner" role="status">{statusMessage}</div>}
 
-      {statusMessage && !errorMessage && <div className="status-banner" role="status">{statusMessage}</div>}
+      <main className="workspace">
+        <nav className="tool-rail" aria-label="편집 도구">
+          <button type="button" onClick={() => fileInputRef.current?.click()}><span aria-hidden="true">▧</span><span>이미지</span></button>
+          <button type="button" onClick={handleAddText}><span aria-hidden="true">T</span><span>텍스트</span></button>
+          {railTabs.map((tab) => (
+            <button key={tab.id} type="button" className={sidebarTab === tab.id ? "active" : ""} aria-pressed={sidebarTab === tab.id} onClick={() => openTab(tab.id)}>
+              <span aria-hidden="true">{tab.icon}</span><span>{tab.label}</span>
+            </button>
+          ))}
+          <button type="button" className={`mobile-only ${isStyleSheetOpen ? "active" : ""}`} aria-expanded={isStyleSheetOpen}
+            onClick={() => { setIsMobileSidebarOpen(false); setIsStyleSheetOpen((isOpen) => !isOpen); }}><span aria-hidden="true">Aa</span><span>속성</span></button>
+        </nav>
 
-      <main className="editor-workspace">
-        <button type="button" className={`mobile-sidebar-backdrop ${isMobileSidebarOpen ? "visible" : ""}`} aria-label="레이어 패널 닫기" onClick={() => setIsMobileSidebarOpen(false)} />
-        <div className={`left-sidebar ${isMobileSidebarOpen ? "mobile-open" : ""}`}>
-          <div className="sidebar-tabs">
-            <button
-              type="button"
-              className={`sidebar-tab-btn ${sidebarTab === "layers" ? "active" : ""}`}
-              onClick={() => setSidebarTab("layers")}
-            >
-              레이어 ({project.layers.length})
-            </button>
-            <button
-              type="button"
-              className={`sidebar-tab-btn ${sidebarTab === "templates" ? "active" : ""}`}
-              onClick={() => setSidebarTab("templates")}
-            >
-              템플릿 ({templates.length})
-            </button>
-            <button
-              type="button"
-              className={`sidebar-tab-btn ${sidebarTab === "baseball" ? "active" : ""}`}
-              onClick={() => setSidebarTab("baseball")}
-            >
-              야구
-            </button>
-          </div>
-
+        <button type="button" className={`drawer-backdrop ${isMobileSidebarOpen ? "visible" : ""}`} aria-label="패널 닫기" onClick={() => setIsMobileSidebarOpen(false)} />
+        <div className={`side-drawer ${isMobileSidebarOpen ? "mobile-open" : ""}`}>
+          {sidebarTab === "shapes" && <ShapePanel onAddShape={handleAddShape} />}
+          {sidebarTab === "gallery" && <GalleryPanel onApply={handleApplyGalleryTemplate} />}
+          {sidebarTab === "meme" && <MemePanel onApplyPreset={handleApplyMemePreset} onAddSticker={handleAddSticker} userStickers={userStickers} onUploadSticker={handleUploadSticker} onAddUserSticker={handleAddUserSticker} onDeleteUserSticker={handleDeleteUserSticker} />}
           {sidebarTab === "layers" && (
             <LayerPanel
               layers={project.layers}
@@ -405,6 +545,9 @@ function App() {
               onToggleLocked={handleToggleLocked}
               onMoveLayer={handleMoveLayer}
               onDeleteLayer={handleDeleteLayer}
+              onReorderLayer={handleReorderLayer}
+              onGroupLayers={handleGroupLayers}
+              onUngroupLayers={handleUngroupLayers}
             />
           )}
           {sidebarTab === "templates" && (
@@ -418,48 +561,28 @@ function App() {
               onImport={handleImportTemplates}
             />
           )}
-          {sidebarTab === "baseball" && (
-            <BaseballTab
-              projectWidth={project.width}
-              projectHeight={project.height}
-              onGenerateCard={handleGenerateBaseballCard}
-            />
-          )}
         </div>
 
-        <CanvasStage ref={canvasStageRef} project={project} selectedLayerId={selectedLayerId} onSelectLayer={setSelectedLayerId} onChangeLayer={updateLayer} />
-        <div className={`style-sheet-shell ${isStyleSheetOpen ? "mobile-open" : ""}`}>
-          <button type="button" className="style-sheet-peek" aria-expanded={isStyleSheetOpen} onClick={() => setIsStyleSheetOpen((isOpen) => !isOpen)}>
+        <CanvasStage ref={canvasStageRef} project={project} selectedLayerId={selectedLayerId} onSelectLayer={setSelectedLayerId} onChangeLayer={updateLayer} onMoveLayers={handleMoveLayers} cropLayerId={cropLayerId} originalViewLayerId={isComparingOriginal ? selectedLayerId : null} />
+        {cropLayerId && (
+          <div className="crop-hint" role="status">
+            <span>✂ 자르기 모드 · 이미지를 끌어 위치 조정 · 마우스 휠(또는 속성 슬라이더)로 확대</span>
+            <button type="button" onClick={() => setCropTargetId(null)}>완료</button>
+          </div>
+        )}
+
+        <div className={`props-shell ${isStyleSheetOpen ? "mobile-open" : ""}`}>
+          <button type="button" className="props-peek" aria-expanded={isStyleSheetOpen} onClick={() => setIsStyleSheetOpen((isOpen) => !isOpen)}>
             <span className="sheet-grabber" aria-hidden="true" />
-            <span className="sheet-summary">{selectedTextLayer ? `텍스트 스타일 · “${selectedTextLayer.text}”` : "텍스트 레이어를 선택하세요"}</span>
+            <span className="sheet-summary">{selectedLayer ? `속성 · ${selectedLayer.name}` : "레이어를 선택하세요"}</span>
             <span aria-hidden="true">{isStyleSheetOpen ? "⌄" : "⌃"}</span>
           </button>
-          <TextStylePanel layer={selectedTextLayer} onChange={(changes) => { if (selectedTextLayer) updateLayer(selectedTextLayer.id, changes); }} />
+          <PropertiesPanel layer={selectedLayer} isCropMode={!!cropLayerId} onToggleCropMode={() => setCropTargetId(cropLayerId ? null : selectedLayer?.id ?? null)} onCompareOriginal={setIsComparingOriginal} onAlign={handleAlign} canvasSize={{ width: project.width, height: project.height }} onChange={(changes, key) => { if (selectedLayer) updateLayer(selectedLayer.id, changes, key); }}
+            onDuplicate={handleDuplicateLayer} onDelete={() => { if (selectedLayer) handleDeleteLayer(selectedLayer.id); }} />
         </div>
       </main>
-
-      <nav className="mobile-bottom-toolbar" aria-label="모바일 편집 도구">
-        <button type="button" onClick={() => fileInputRef.current?.click()}><span aria-hidden="true">▧</span><span>이미지</span></button>
-        <button type="button" onClick={handleAddText}><span aria-hidden="true">T</span><span>텍스트</span></button>
-        <button type="button" className={isMobileSidebarOpen ? "active" : ""} aria-expanded={isMobileSidebarOpen} onClick={() => { setSidebarTab("layers"); setIsMobileSidebarOpen((isOpen) => !isOpen); }}><span aria-hidden="true">▱</span><span>레이어</span></button>
-        <button type="button" className={isStyleSheetOpen ? "active" : ""} aria-expanded={isStyleSheetOpen} onClick={() => setIsStyleSheetOpen((isOpen) => !isOpen)}><span aria-hidden="true">Aa</span><span>속성</span></button>
-      </nav>
     </div>
   );
 }
-
-const toolbarButtonStyle: React.CSSProperties = {
-  height: 34,
-  display: "flex",
-  alignItems: "center",
-  padding: "0 14px",
-  borderRadius: 8,
-  border: "1px solid var(--color-border)",
-  background: "transparent",
-  color: "var(--color-text)",
-  fontSize: 13,
-  fontFamily: "inherit",
-  cursor: "pointer",
-};
 
 export default App;
